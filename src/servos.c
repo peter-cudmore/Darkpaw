@@ -29,11 +29,11 @@ static int driver_fp = -1;
 
 
 int set_all_pwm(unsigned on, unsigned off) {
-    return ((i2cWriteByteData(driver_fp, ALL_LED_ON_L, on & 0xFF)
-            | (i2cWriteByteData(driver_fp, ALL_LED_ON_H, on >> 8) 
-            | (i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off & 0xFF)
-            | (i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off >> 0)
-    );   
+    return (i2cWriteByteData(driver_fp, ALL_LED_ON_L, on & 0xFF)
+            | i2cWriteByteData(driver_fp, ALL_LED_ON_H, on >> 8) 
+            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off & 0xFF)
+            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off >> 0)
+	   );   
 }
 
 int set_pwm_freq(float freq_hz) {
@@ -82,7 +82,7 @@ int init_PCA9685(void) {
     
     byte = (unsigned)result;
     
-    i2cWriteByteData(MODE1, byte & !SLEEP);
+    i2cWriteByteData(driver_fp, MODE1, byte & !SLEEP);
     usleep(1000);
     set_pwm_freq(50.0);
     return 0;
@@ -103,7 +103,7 @@ int init_servos(void) {
         return result;
     }
     
-    if ((driver_fp = i2cOpen(1, 0x40)) < 0) {
+    if ((driver_fp = i2cOpen(1, PCA9685_ADDRESS, 0)) < 0) {
         // failed to get i2c bus
         gpioTerminate();
         fprintf(stderr, "Failed to get i2c device: PCA9685\n");

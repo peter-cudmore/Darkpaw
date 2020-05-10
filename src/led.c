@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <unistd.h>
 #include "led.h"
 
@@ -21,7 +22,7 @@ ws2811_t ledstring = {
 		[0] = {
 		.gpionum = LED_PIN,
 		.count = LED_COUNT,
-		.invert = 1,
+		.invert = 0,
 		.brightness = 255,
 		.strip_type = WS2811_STRIP_RGB,
 		},
@@ -65,14 +66,16 @@ int clear_all(void) {
 	return render();
 }
 
-void run_test(void) {
+int run_test(void) {
 	int result;
-	for (int i = 0; i < 3 * LED_COUNT; i++) {
-		set_color(i, basecolors[i % LED_COUNT]);
-		usleep(1000000 / 60);
+	for (int j = 0; j < 3; j++){
+	   for (int i = 0; i < 3 * LED_COUNT; i++) {
+	        set_color(i, basecolors[j]);
+		usleep(1000000 / 15);
 		if ((result = render()) < 0) {
-			return result;
+		   return result;
 		};
+	    }
 	}
 	
 	result = clear_all();
@@ -88,10 +91,12 @@ int init_leds(void) {
 		fprintf(stderr, "ws2811_init failed %s\n", ws2811_get_return_t_str(ret));
 		return (int) ret;
 	}
-	run_test();
-	return 0;
+	return run_test();
+	
 };
 
 void close_leds(void) {
+	clear_all();
+	render();
 	ws2811_fini(&ledstring);
 };

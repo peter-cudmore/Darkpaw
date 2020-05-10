@@ -4,7 +4,7 @@ LFLAGS = deps/rpi_ws281x/libws2811.a -lpigpio -lrt
 ODIR=obj
 SDIR=src
 
-_OBJ = camera
+_OBJ = camera.o estimators.o led.o main.o servos.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SDIR)/%.c
