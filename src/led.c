@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "led.h"
 
 ws2811_led_t dotcolors[] =
@@ -32,18 +33,18 @@ ws2811_t ledstring = {
 		},
 	},
 };
-ws2811_led_t dotcolors[] =
+ws2811_led_t basecolors[] =
 {
 	0x00200000,  // red
 	0x00002000,  // green
 	0x00000020,  // blue
 };
-void set_colors(const int step) {
+void set_color(const int step, ws2811_led_t color) {
 
 	for (int i = 0; i < 6; i++) {
 
 		if (i == step % 6)
-			ledstring.channel[0].leds[i] = 0x00200000;
+			ledstring.channel[0].leds[i] = color;
 		else
 			ledstring.channel[0].leds[i] = 0x00000000;
 	}
@@ -59,6 +60,27 @@ int render(void) {
 	return 0;
 }
 
+int clear_all(void) {
+	for (int i = 0; i < LED_COUNT; i++){ledstring.channel[0].leds[i] = 0x00000000;}
+	return render();
+}
+
+void run_test(void) {
+	int result;
+	for (int i = 0; i < 3 * LED_COUNT; i++) {
+		set_color(i, basecolors[i % LED_COUNT]);
+		usleep(1000000 / 60);
+		if ((result = render()) < 0) {
+			return result;
+		};
+	}
+	
+	result = clear_all();
+	
+	return result;
+}
+
+
 int init_leds(void) {
 
 	ws2811_return_t ret;
@@ -66,6 +88,7 @@ int init_leds(void) {
 		fprintf(stderr, "ws2811_init failed %s\n", ws2811_get_return_t_str(ret));
 		return (int) ret;
 	}
+	run_test();
 	return 0;
 };
 

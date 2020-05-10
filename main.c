@@ -13,6 +13,7 @@ int main(int arvc, char* argv[]){
     // startup routine
     if ((exit_code = init_leds()) < 0)       { goto total_failure; }
     if ((exit_code = init_servos()) < 0)     { goto shutdown_leds; }
+    // sensors (mpu6050)
     if ((exit_code = init_camera()) < 0)     { goto shutdown_servos; }
     if ((exit_code = init_estimators()) < 0) { goto shutdown_camera; }
     // web api

@@ -16,6 +16,8 @@
 
 int init_leds(void);
 void close_leds(void);
+
+
 #define LED_H
 #endif
 

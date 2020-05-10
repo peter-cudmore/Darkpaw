@@ -1,22 +1,20 @@
 CC=gcc
 CFLAGS=-Ideps
-LFLAGS = deps/rpi_ws281x/libws2811.a
-OBJ = main.o
-SRC = src
+LFLAGS = deps/rpi_ws281x/libws2811.a -lpigpio -lrt
+ODIR=obj
+SDIR=src
 
+_OBJ = camera
+OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-%.o: %.c
+$(ODIR)/%.o: $(SDIR)/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 main: $(OBJ)
 	$(CC) -o $@ $^ $(LFLAGS)
 
-.PHONY: help clean
+.PHONY: clean
 
 clean:
-	rm main
-	rm main.o
-
-help:
-	@echo Install
-
+	rm -f main
+	rm -f $(ODIR)/*.o
