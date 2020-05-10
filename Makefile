@@ -1,7 +1,9 @@
 CC=gcc
 CFLAGS=-Ideps
-LFLAGS=deps/rpi_ws281x/libws2811.a
+LFLAGS = deps/rpi_ws281x/libws2811.a
 OBJ = main.o
+SRC = src
+
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
