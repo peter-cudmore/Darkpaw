@@ -66,7 +66,7 @@ int set_pwm(unsigned channel, unsigned on, unsigned off) {
 }
 
 
-int init_PCA9685(void) {
+static int init_PCA9685(void) {
     
     int result;
     unsigned byte;
@@ -89,15 +89,15 @@ int init_PCA9685(void) {
 };
 
 void reset_stance(void) {
-    for (int i = 0; i < 12; i++) {
-        set_pwm(i, 0, 300);
+	for (int i = 0; i < 12; i++) {
+		set_pwm(i, 0, 300);
     }
 };
 
-void run_test(void) {
-    for (int i = 0; i < 12; i += 3) {
+static void run_test(void) {
+    for (int i = 4; i < 5; i ++) {
         set_pwm(i, 0, 100); 
-        usleep(1000000 / 15);
+        usleep(10000000);
     }
 };
 

@@ -65,8 +65,7 @@ int clear_all(void) {
 	for (int i = 0; i < LED_COUNT; i++){ledstring.channel[0].leds[i] = 0x00000000;}
 	return render();
 }
-
-int run_test(void) {
+static int run_test(void) {
 	int result;
 	for (int j = 0; j < 3; j++){
 	   for (int i = 0; i < 3 * LED_COUNT; i++) {
