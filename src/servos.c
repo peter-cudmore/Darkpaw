@@ -92,7 +92,14 @@ void reset_stance(void) {
     for (int i = 0; i < 12; i++) {
         set_pwm(i, 0, 300);
     }
-}
+};
+
+void run_test(void) {
+    for (int i = 0; i < 12; i += 3) {
+        set_pwm(i, 0, 100); 
+        usleep(1000000 / 15);
+    }
+};
 
 
 int init_servos(void) {
@@ -111,6 +118,10 @@ int init_servos(void) {
     }
 
     init_PCA9685();
+    reset_stance();
+
+    run_test();
+
     reset_stance();
     // set pwn initial states
     // set up interface
