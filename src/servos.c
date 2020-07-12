@@ -70,16 +70,19 @@ int set_pwm(unsigned channel, unsigned on, unsigned off) {
 
 static int init_PCA9685(void) {
     
-    int result;
+    int result, error_code;
     unsigned byte;
     
-    i2cWriteByte(driver_fp, SWRST);
-
     
-    set_all_pwm(0, 0);
+    if ((error_code = set_all_pwm(0, 0)) != 0) {
+        fprintf(stderr, "Failed to set PWM values: Error %i", error_code);
+        return error_code;
+    }
     
-    i2cWriteByteData(driver_fp, MODE2, OUTDRV);
-    i2cWriteByteData(driver_fp, MODE1, ALLCALL);
+    if ((error_code = i2cWriteByteData(driver_fp, MODE2, OUTDRV) | i2cWriteByteData(driver_fp, MODE1, ALLCALL)) != 0) {
+        fprintf(stderr, "Failed to set PCA9685 mode: Error %i", error_code);
+        return error_code;
+    }
     
     usleep(1000);
     if ((result = i2cReadByteData(driver_fp, MODE1)) < 0) {
@@ -122,7 +125,9 @@ int init_servos(void) {
 }
 
 void close_servos(void) {
-    if ((driver_fp > 0) && (i2cClose(driver_fp) != 0)) {
-        fprintf(stderr, "Failed to close PCA9685\n");
+    if (driver_fp > 0){
+        i2cWriteByte(driver_fp, SWRST);
+        if (i2cClose(driver_fp) != 0)
+            fprintf(stderr, "Failed to close PCA9685\n");
     }
 }
