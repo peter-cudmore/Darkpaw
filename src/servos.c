@@ -72,6 +72,10 @@ static int init_PCA9685(void) {
     
     int result;
     unsigned byte;
+    
+    i2cWriteByte(driver_fp, SWRST);
+
+    
     set_all_pwm(0, 0);
     
     i2cWriteByteData(driver_fp, MODE2, OUTDRV);
