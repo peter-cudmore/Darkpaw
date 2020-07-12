@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "servos.h"
+#include "pigpio/pigpio.h"
 
 #define PCA9685_ADDRESS 0x40
 #define MODE1           0x00
@@ -24,6 +25,7 @@
 #define ALLCALL         0x01
 #define INVRT           0x10
 #define OUTDRV          0x04
+#define SWRST           0x06
 
 static int driver_fp = -1;
 
@@ -71,8 +73,9 @@ static int init_PCA9685(void) {
     int result;
     unsigned byte;
     set_all_pwm(0, 0);
-    i2cWriteByteData(driver_fp, MODE1, ALLCALL);
+    
     i2cWriteByteData(driver_fp, MODE2, OUTDRV);
+    i2cWriteByteData(driver_fp, MODE1, ALLCALL);
     
     usleep(1000);
     if ((result = i2cReadByteData(driver_fp, MODE1)) < 0) {
@@ -103,16 +106,9 @@ static void run_test(void) {
 
 
 int init_servos(void) {
-    int result;
-    if ((result = gpioInitialise()) < 0)
-    {
-        // pigpio initialisation failed.
-        return result;
-    }
     
     if ((driver_fp = i2cOpen(1, PCA9685_ADDRESS, 0)) < 0) {
         // failed to get i2c bus
-        gpioTerminate();
         fprintf(stderr, "Failed to get i2c device: PCA9685\n");
         return -1;
     }
@@ -120,17 +116,13 @@ int init_servos(void) {
     init_PCA9685();
     reset_stance();
 
-    run_test();
-
-    reset_stance();
     // set pwn initial states
     // set up interface
     return 0;
 }
 
 void close_servos(void) {
-    if (driver_fp >= 0) {
-        i2cClose(driver_fp);
+    if ((driver_fp > 0) && (i2cClose(driver_fp) != 0)) {
+        fprintf(stderr, "Failed to close PCA9685\n");
     }
-    gpioTerminate();
 }
