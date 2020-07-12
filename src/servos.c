@@ -108,6 +108,7 @@ static int init_PCA9685(void) {
 void reset_stance(void) {
 	for (int i = 0; i < 12; i++) {
 		set_pwm(i, 0, 300);
+        usleep(1000);
     }
 };
 
@@ -126,7 +127,7 @@ int init_servos(void) {
         return -1;
     };
 
-    // reset_stance();
+    reset_stance();
 
     return 0;
 }
