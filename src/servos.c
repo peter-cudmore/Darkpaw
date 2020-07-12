@@ -26,6 +26,7 @@
 #define INVRT           0x10
 #define OUTDRV          0x04
 #define SWRST           0x06
+#define RESET           0x00
 
 static int driver_fp = -1;
 
@@ -42,6 +43,7 @@ int set_pwm_freq(float freq_hz) {
     float prescaleval = 25000000.0 / 4096.0 ;    // 25MHz
     unsigned prescale;
     unsigned oldmode, newmode;
+    int result;
 
     prescaleval /= freq_hz;
     prescaleval -= 1.0;
@@ -49,13 +51,17 @@ int set_pwm_freq(float freq_hz) {
     
     oldmode = i2cReadByteData(driver_fp, MODE1);
     newmode = (oldmode & 0x7F) | SLEEP;
-    i2cWriteByteData(driver_fp, MODE1, newmode);
-    i2cWriteByteData(driver_fp, PRESCALE, prescale);
-    i2cWriteByteData(driver_fp, MODE1, oldmode);
+    result = i2cWriteByteData(driver_fp, MODE1, newmode) 
+        | i2cWriteByteData(driver_fp, PRESCALE, prescale) 
+        | i2cWriteByteData(driver_fp, MODE1, oldmode);
     
+    if (result < 0) {
+        return -1;
+    }
+ 
     usleep(1000);
-    i2cWriteByteData(driver_fp, MODE1, oldmode | RESTART);
-    return 0;
+
+    return i2cWriteByteData(driver_fp, MODE1, oldmode | RESTART);
 }
 
 int set_pwm(unsigned channel, unsigned on, unsigned off) {
@@ -72,7 +78,6 @@ static int init_PCA9685(void) {
     
     int result, error_code;
     unsigned byte;
-    
     
     if ((error_code = set_all_pwm(0, 0)) != 0) {
         fprintf(stderr, "Failed to set PWM values: Error %i", error_code);
@@ -92,10 +97,12 @@ static int init_PCA9685(void) {
     
     byte = (unsigned)result;
     
-    i2cWriteByteData(driver_fp, MODE1, byte & !SLEEP);
+    if (i2cWriteByteData(driver_fp, MODE1, byte & !SLEEP) < 0) {
+        return -1;
+    };
     usleep(1000);
-    set_pwm_freq(50.0);
-    return 0;
+ 
+    return set_pwm_freq(50.0);
 };
 
 void reset_stance(void) {
@@ -119,14 +126,14 @@ int init_servos(void) {
         return -1;
     };
 
-    reset_stance();
+    // reset_stance();
 
     return 0;
 }
 
 void close_servos(void) {
     if (driver_fp > 0){
-        i2cWriteByte(driver_fp, SWRST);
+        i2cWriteByteData(driver_fp, MODE1, RESET);
         if (i2cClose(driver_fp) != 0)
             fprintf(stderr, "Failed to close PCA9685\n");
     }
