@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "estimators.h"
+#include "sensors.h"
 #include "pigpio/pigpio.h"
 #include <unistd.h>
 
@@ -63,8 +63,7 @@ int init_mpu6050(void) {
 };
 
 
-
-int init_estimators(void) {
+int init_sensors(void) {
     if ((driver_fp = i2cOpen(1, MPU6050_ADDRESS, 0)) < 0) {
         // failed to get i2c bus
         fprintf(stderr, "Failed to get i2c device: MPU6050\n");
@@ -73,7 +72,7 @@ int init_estimators(void) {
 	return 0;
 };
 
-void close_estimators(void) {
+void close_sensors(void) {
     if ((driver_fp > 0) && (i2cClose(driver_fp) != 0)) {
         fprintf(stderr, "Failed to close i2c device: MPU6050\n");
     }

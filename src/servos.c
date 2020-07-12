@@ -97,13 +97,6 @@ void reset_stance(void) {
     }
 };
 
-static void run_test(void) {
-    for (int i = 4; i < 5; i ++) {
-        set_pwm(i, 0, 100); 
-        usleep(10000000);
-    }
-};
-
 
 int init_servos(void) {
     
@@ -113,11 +106,14 @@ int init_servos(void) {
         return -1;
     }
 
-    init_PCA9685();
+    if (init_PCA9685() != 0) {
+        fprintf(stderr, "Failed to initialise PCA9685\n");
+        close_servos();
+        return -1;
+    };
+
     reset_stance();
 
-    // set pwn initial states
-    // set up interface
     return 0;
 }
 
