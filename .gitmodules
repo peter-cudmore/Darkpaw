@@ -4,3 +4,6 @@
 [submodule "deps/rpi_ws281x"]
 	path = deps/rpi_ws281x
 	url = https://github.com/jgarff/rpi_ws281x.git
+[submodule "deps/cglm"]
+	path = deps/cglm
+	url = https://github.com/recp/cglm.git
