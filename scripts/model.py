@@ -2,6 +2,7 @@ import numpy as np
 import sympy as sp
 from scipy.optimize import root
 
+
 l_a = 40
 l_b = 36
 l_c = 32

@@ -28,6 +28,13 @@
 #define SWRST           0x06
 #define RESET           0x00
 
+
+#define SERVO_MAX  450
+#define SERVO_MIN  150
+#define SERVO_ZERO 300 
+
+#define INVALID_SERVO_COMMAND -1;
+
 static int driver_fp = -1;
 
 
@@ -65,6 +72,9 @@ int set_pwm_freq(float freq_hz) {
 }
 
 int set_pwm(unsigned channel, unsigned on, unsigned off) {
+    if (off < SERVO_MIN) || (off > SERVO_MAX)
+        return INVALID_SERVO_COMMAND;
+
     return (
         i2cWriteByteData(driver_fp, LED0_ON_L + 4 * channel, on & 0xFF)
         | i2cWriteByteData(driver_fp, LED0_ON_H + 4 * channel, on >> 8)
@@ -108,7 +118,6 @@ static int init_PCA9685(void) {
 void reset_stance(void) {
 	for (int i = 0; i < 12; i++) {
 		set_pwm(i, 0, 300);
-        usleep(1000);
     }
 };
 
