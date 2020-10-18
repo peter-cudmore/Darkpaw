@@ -120,16 +120,16 @@ class Leg:
 
         transforms = {
             self.Arm_Anchor: anchor,
-            self.Leg_Pivot: pivot @leg_pivot,
-            self.Leg_Bottom: pivot @leg_pivot @ RotateXZ(beta_Y) @ Translate(-model.leg_pivot_to_foot_x, 0, model.leg_pivot_to_foot_y),
-            self.Leg_Top: pivot @leg_pivot @ RotateXZ(beta_Y) @ Translate(-model.Y_o, 0, model.Y_h) @ RotateXZ(-beta_Y),
-            self.Y_inner: pivot @RotateXZ(beta_Y) @ Translate(-model.Y_i, 0, model.Y_h) @ RotateXZ(-beta_Y),
-            self.Y_Outer: pivot @y_outer,
-            self.D_bottom: pivot @RotateXZ(beta_D) @ Translate(0, 0, model.D_section_b) @ RotateXZ(-beta_D),
-            self.Top_Motor_Arm: pivot @top_motor @ RotateXZ(motor_top) @ Translate(0, 0, model.motor_arm_top) @ RotateXZ(-motor_top),
-            self.Top_Motor_Base: pivot @top_motor,
-            self.Bottom_Motor_Base: pivot @bottom_motor,
-            self.Bottom_Motor_Arm: pivot @bottom_motor @ RotateXZ(motor_bottom) @ Translate(0, 0, model.motor_arm_bottom) @ RotateXZ(-motor_bottom),
+            self.Leg_Pivot: pivot @ leg_pivot,
+            self.Leg_Bottom: pivot @ leg_pivot @ RotateXZ(beta_Y) @ Translate(-model.leg_pivot_to_foot_x, 0, model.leg_pivot_to_foot_y),
+            self.Leg_Top: pivot @ leg_pivot @ RotateXZ(beta_Y) @ Translate(-model.Y_o, 0, model.Y_h) @ RotateXZ(-beta_Y),
+            self.Y_inner: pivot @ RotateXZ(beta_Y) @ Translate(-model.Y_i, 0, model.Y_h) @ RotateXZ(-beta_Y),
+            self.Y_Outer: pivot @ y_outer,
+            self.D_bottom: pivot @ RotateXZ(beta_D) @ Translate(0, 0, model.D_section_b) @ RotateXZ(-beta_D),
+            self.Top_Motor_Arm: pivot @ top_motor @ RotateXZ(motor_top) @ Translate(0, 0, model.motor_arm_top) @ RotateXZ(-motor_top),
+            self.Top_Motor_Base: pivot @ top_motor,
+            self.Bottom_Motor_Base: pivot @ bottom_motor,
+            self.Bottom_Motor_Arm: pivot @ bottom_motor @ RotateXZ(motor_bottom) @ Translate(0, 0, model.motor_arm_bottom) @ RotateXZ(-motor_bottom),
             self.Pivot: pivot
         }
 

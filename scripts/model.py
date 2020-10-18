@@ -1,7 +1,7 @@
 import numpy as np
-import sympy as sp
+import cvxpy as cp
 from scipy.optimize import root
-
+from helpers import *
 
 l_a = 40
 l_b = 36
@@ -31,99 +31,9 @@ body_width = 84
 body_linkage_offset_radial = 36
 body_linkage_offset_inner = 16
 motor_arm_body = 12.5
-
-def R(th):
-    c = sp.cos(th)
-    s = sp.sin(th)
-    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
-
-def S(s):
-    return np.array([[s, 0, 0], [0, s, 0], [0, 0, 1]])
-
-
 angles = {}
 
 
-def T(x, y, th=0):
-    c = sp.cos(th)
-    s = sp.sin(th)
-    return np.array([[c, -s, x], [s, c, y], [0, 0, 1]])
-
-
-def to_line(point, origin):
-    return [float(origin[0]), float(point[0])], [float(origin[1]), float(point[1])]
-
-
-def _simplify_all(eqn):
-    out_eqn = eqn
-    atoms = out_eqn.atoms()
-    for atm in atoms:
-        if atm.is_symbol:
-            out_eqn = tan_simplify(out_eqn, atm)
-    return out_eqn
-
-
-def simplify_array(arr, subs=None):
-    n, m = arr.shape
-    for i in range(0, n):
-        for j in range(0, m):
-            arr[i, j] = sp.simplify(arr[i, j])
-            if subs:
-                arr[i ,j] = sp.simplify(arr[i, j].subs(subs))
-    return arr
-
-
-def tan_simplify(eqn, atom, implicit=True, positive_branch=False):
-
-    s = sp.Dummy('s')
-    c = sp.Dummy('c')
-
-    eq_temp = eqn.subs([(sp.sin(atom), s), (sp.cos(atom), c)]).collect(c).collect(s)
-
-    A = eq_temp.coeff(c, 1).coeff(s, 0)
-    B = eq_temp.coeff(s, 1).coeff(c, 0)
-    remainder = eq_temp.coeff(c, 0).coeff(s, 0)
-
-    difference = sp.expand(A*c + B*s + remainder - eq_temp)
-
-    if difference != 0 or not A or not B:
-        return eqn
-    A = _simplify_all(A)
-    B = _simplify_all(B)
-    remainder = _simplify_all(remainder)
-    ratio = sp.simplify(B / A)
-
-    magnitude = _simplify_all(sp.simplify(A**2 + B**2))
-    phase_shift = sp.atan(ratio)
-    if positive_branch:
-        C = sp.simplify(sp.sqrt(magnitude))
-    else:
-        C = sp.simplify(sp.sign(A) * sp.sqrt(magnitude))
-    # C = sp.simplify(sp.sqrt(magnitude))
-    # A sin(theta) + B cos(theta)  + R = C cos(theta - delta) + R = 0
-    # so cos(theta + delta) =  - R / C
-    # theta - delta = arccos(-R/C)
-    # theta = arctan(B/A) + arccos(-R/C)
-    if implicit:
-        return sp.simplify(C * sp.cos(atom - phase_shift) + remainder)
-    else:
-        return sp.atan(ratio) + sp.acos(sp.simplify(-remainder / C))
-
-
-def Maclaurin_series(expr, atom, order=4):
-    return Taylor_series(expr, atom, 0, order=order)
-
-
-def Taylor_series(expr, x, x0, order=4):
-    f = expr
-    output = 0
-    output += sp.re(f.subs(x, x0))
-
-    for i in range(1, order + 1):
-        f = f.diff(x)
-        output += sp.re((f.subs(x, x0 / sp.factorial(i)))) * (x - x0)**i
-
-    return output
 
 
 beta_D, beta_Y, beta_A = sp.symbols(r'\beta_D, \beta_Y, \beta_A', real=True)
@@ -143,7 +53,7 @@ Body_Anchor = T(body_width / 2, -body_length/2) @ R(beta_A) @ T(-body_linkage_of
 Body_Motor_Arm = T(0, -body_length / 2) @ R(u_b) @ T(0, -motor_arm_body) @ R(-u_h)
 
 C_a = simplify_array((Body_Anchor - Body_Motor_Arm).T @ (Body_Anchor - Body_Motor_Arm))
-f_a = sp.simplify(sp.expand(C_a[2, 2] - l_a**2))
+f_a = sp.expand_trig(sp.simplify(sp.expand(C_a[2, 2] - l_a**2)))
 f_a_lambda = sp.lambdify((beta_A, u_b), f_a)
 
 
@@ -155,7 +65,7 @@ def beta_a(body_motor, last_value=0):
 
 
 C_b = simplify_array((Bottom_Motor_Anchor - D_bottom).T @ (Bottom_Motor_Anchor - D_bottom))
-f_b = sp.simplify(sp.expand(C_b[2, 2] - l_b**2))
+f_b = sp.expand_trig(sp.simplify(sp.expand(C_b[2, 2] - l_b**2)))
 f_b_lambda = sp.lambdify((beta_D, u_h), f_b)
 
 
@@ -167,7 +77,7 @@ def beta_d(bottom_motor, last_value=0):
 
 
 C_t = simplify_array((Top_Motor_Anchor - Y_inner).T @ (Top_Motor_Anchor - Y_inner))
-f_t = sp.simplify(sp.expand(C_t[2, 2] - l_d ** 2))
+f_t = sp.expand_trig(sp.simplify(sp.expand(C_t[2, 2] - l_d ** 2)))
 f_t_lambda = sp.lambdify((beta_Y, u_r), f_t)
 
 
@@ -178,39 +88,6 @@ def beta_y(top_motor, last_value=0):
     ).x[0]
 
 
-def RotateXY(angle):
-    c = sp.cos(angle)
-    s = sp.sin(angle)
-    return np.array([[c, -s, -s, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-
-
-def RotateXZ(angle):
-    c = sp.cos(angle)
-    s = sp.sin(angle)
-    return np.array([[c,  0, -s, 0], [0,  1, 0, 0], [s,  0, c, 0], [0,  0, 0, 1]])
-
-
-def RotateYZ(angle):
-    c = sp.cos(angle)
-    s = sp.sin(angle)
-    return np.array([[1,  0,  0, 0], [0,  c, -s, 0], [0,  s, c, 0], [0,  0, 0, 1]])
-
-
-def ReflectY():
-    return np.array([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-
-
-def ReflectX():
-    return np.array([[1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-
-
-def Translate(x, y, z):
-    out = np.eye(4, dtype=np.float)
-    for i, v in enumerate((x, y, z)):
-        out[i, 3] = v
-    return out
-
-
 def get_leg_position(front=True, left=True):
     anchor = Translate(body_width / 2, body_width / 2, 0)
 
@@ -218,64 +95,176 @@ def get_leg_position(front=True, left=True):
         anchor = ReflectX() @ anchor
     if not front:
         anchor = ReflectY() @ anchor
+
     Leg_Bottom = (
          anchor @ RotateXY(beta_A) @ Translate(arm_anchor_to_pivot, 0, 0)
          @ RotateXZ(beta_D) @ Translate(-D_section_e, 0, 0) @ RotateXZ(-beta_D) @ RotateXZ(beta_Y)
          @ Translate(-leg_pivot_to_foot_x, 0, leg_pivot_to_foot_y)
     ) @ np.array([0, 0, 0, 1])
 
-    return Leg_Bottom[0:3], (f_a, f_b, f_t)
+    foot_pos = []
+
+    for i in range(0, 3):
+        foot_pos.append(filter_tiny_numbers(sp.expand_trig(sp.simplify(Leg_Bottom[i]))))
+
+    atoms = [beta_A, beta_Y, beta_D, u_b, u_h, u_r]
+
+    return atoms, foot_pos, (filter_tiny_numbers(f) for f in (f_a, f_b, f_t))
 
 
-def truncate(eqn, order=4):
-    out_eqn = 0
+def build_full_system():
 
-    coeff_dict = eqn.as_coefficients_dict()
-    cutoff = max(coeff_dict.values()) / np.power(10, order)
-
-    for basis, term in coeff_dict.items():
-        if term > cutoff:
-            out_eqn += basis * term
-
-    return out_eqn
-
-
-def diff_on_S1(eqn, ignore=None):
-
-    symbols = {
-        a: sp.symbols(f'w_{{{a}}}')
-        for a in eqn.atoms() if a.is_symbol and (not ignore or a not in ignore)
+    # order is FL, BL, FR, BR
+    leg_args = {
+        #id, #front  #left
+        0: (True, True),
+        1: (False, True),
+        2: (True, False),
+        3: (False, False)
     }
 
-    out_eqns = {da:  sp.simplify(1j * a * eqn.diff(a)) for a, da in symbols.items()}
+    u = sp.symbols([f'u_{i}' for i in range(0, 12)])
+    q = sp.symbols([f'q_{i}' for i in range(0, 12)])
 
-    return out_eqns
+    legs = {}
+    constraints = []
+    for idx, (front, left) in leg_args.items():
+        atoms, pos, constraints_ = get_leg_position(front, left)
 
+        substitutions = [(atoms[i], q[i + 3 * idx]) for i in range(0, 3)]
+        substitutions += [(atoms[i + 3], u[i + 3*idx]) for i in range(0, 3)]
 
-def jacobian(eqns):
+        legs[idx] = sp.Matrix([filter_tiny_numbers(p.subs(substitutions)) for p in pos])
+        constraints += [filter_tiny_numbers(c.subs(substitutions)) for c in constraints_]
 
-    basis_vectors = []
-    values = {}
-    for row, eqn in enumerate(eqns):
-        derivatives = diff_on_S1(eqn)
-        for dx, dfdx in derivatives.items():
-            try:
-                col = basis_vectors.index(dx)
-            except ValueError:
-                col = len(basis_vectors)
-                basis_vectors.append(dx)
-            values[(row, col)] = dfdx
-
-    matrix = sp.Matrix(
-        [[0 if (row, col) not in values else values[(row, col)] for col in range(len(basis_vectors))]
-         for row in range(len(eqns))
-        ]
-    )
-    return matrix, sp.Matrix([[b] for b in basis_vectors])
+    return q, u, legs, constraints
 
 
-def compute_normal_form(equation, substitution, order):
+def construct_system():
+    q_base, u_base, legs, constraints = build_full_system()
 
-    x, y = substitution
-    h = sp.Dummy('h')
+    X_temp, eqns, subs, maps = angles_to_quadratics(constraints, q_base, u_base)
 
+    legs = {l: legs[l].subs(subs) for l in legs}
+
+    return X_temp, legs, eqns, maps
+
+
+def get_motor_bounds_constraints(decision_vars, cfg_space, u_map):
+
+    constraints = []
+    for (_, c_i) in u_map.values():
+        idx = cfg_space.index(c_i)
+        constraints.append(decision_vars[idx] >= 0)
+
+    return constraints
+
+
+def get_quadratic_constraints(decision_vars, cfg_space, eqns):
+
+    constraints = []
+    X0 = [0] * len(cfg_space)
+
+    for eqn in eqns:
+        P, qT, r, _ = quadratic_form(eqn, cfg_space, X0)
+        M = np.block([[P, qT.T / 2], [qT/2, r]])
+        #print(np.linalg.eigvals(M))
+        constraints.append(cp.quad_form(decision_vars, M) == 0)
+
+    return constraints
+
+
+def get_quadratic_ojectives(decision_vars, cfg_space, eqns):
+
+    objectives = []
+    X0 = [0] * len(cfg_space)
+
+    for eqn in eqns:
+        P, qT, r, _, = quadratic_form(eqn, cfg_space, X0)
+        expr = cp.quad_form(decision_vars, P) + qT @ decision_vars + r
+        objectives.append(expr)
+    return objectives
+
+
+def get_leg_as_quadratics(cfg_space, leg):
+    X0 = [0] * len(cfg_space)
+    out = []
+    for i in range(3):
+        p, q, r, _, _ = quadratic_form(leg[i], cfg_space, X0)
+        out += [(p, q, r)]
+    return out
+
+
+def create_leg_qp(front, left, gamma=0.01):
+    atoms, pos, constraints = get_leg_position(front, left)
+
+    r_cmd = cp.Parameter(3)
+
+    u = sp.symbols([f'u_{i}' for i in range(0, 3)])
+    q = sp.symbols([f'q_{i}' for i in range(0, 3)])
+
+    substitutions = [(atoms[i], q[i]) for i in range(0, 3)]
+    substitutions += [(atoms[i + 3], u[i]) for i in range(0, 3)]
+
+    r = [filter_tiny_numbers(p.subs(substitutions)) for p in pos]
+    constraints = [filter_tiny_numbers(c.subs(substitutions)) for c in constraints]
+
+    x, eqns, subs, (xq, xu) = angles_to_quadratics(constraints, q, u)
+
+    X = cp.Variable(len(x))
+
+    cp_constraints = get_motor_bounds_constraints(X, x, xu)
+    cp_constraints += get_quadratic_constraints(X, x, eqns)
+
+    # objective = r_error + gamma * cp.quad_form(X, Pi_u)
+
+    problem = cp.Problem(cp.Minimize(cp.norm(X, 1)), cp_constraints)
+
+    return problem, X, cp_constraints
+
+
+def create_leg_complex_problem(front=True, left=True):
+    atoms, pos, constraints = get_leg_position(front, left)
+
+    u = sp.symbols([f'u_{i}' for i in range(0, 3)])
+    q = sp.symbols([f'q_{i}' for i in range(0, 3)])
+
+    substitutions = [(atoms[i], q[i]) for i in range(0, 3)]
+    substitutions += [(atoms[i + 3], u[i]) for i in range(0, 3)]
+
+    r = [filter_tiny_numbers(p.subs(substitutions)) for p in pos]
+    constraints = [filter_tiny_numbers(c.subs(substitutions)) for c in constraints]
+    x, eqns, subs, (xq, xu) = angles_to_complex(r + constraints, q, u)
+
+    eqns = [remove_nonzero_factors(e) if i >= len(r) else e for i, e in enumerate(eqns)]
+
+    return x, eqns, (xq, xu)
+
+# def solve_leg_qp(r_cmd, q_current=None):
+
+
+def get_differential_ik(front=True, left=True, motor_cost=0.1):
+
+    x, eqns, (xq, xu) = create_leg_complex_problem(front, left)
+
+    jacobian_terms = [[row.diff(x_i) for x_i in x] for row in eqns]
+    jacobian_terms += [[motor_cost if x_i == u_i else 0 for x_i in x] for u_i in xu]
+    dphi_dq = sp.Matrix(jacobian_terms)
+
+    dq_dtheta = sp.Matrix([[1j/x_i if x_i == x_j else 0 for x_i in x] for x_j in x])
+
+    A = dphi_dq * dq_dtheta
+
+    def step(desired_position, current_angles):
+        q_now = np.exp(1j*current_angles)
+        Aq = sp.matrix2numpy(A.subs([(x_i, q_i) for x_i, q_i in zip(x, q_now)]), dtype=np.complex)
+
+        b = np.zeros((Aq.shape[0],))
+        b[0:3] = desired_position
+        # r = Aq.T @ b
+        # inverse = np.linalg.inv(Aq.T @ Aq)
+        # return current_angles + np.real(inverse @ r)
+        pinv = np.linalg.pinv(Aq)
+        return np.real(pinv @ b)
+
+    return step, (xq, xu)
