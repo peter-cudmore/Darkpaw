@@ -6,7 +6,7 @@
 #include "camera.h"
 #include "sensors.h"
 
-static const unsigned stages = 3
+static const unsigned stages = 3;
 
 static void* shutdown_sequence[stages];
 static unsigned startup_stage = stages;
