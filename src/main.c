@@ -9,8 +9,8 @@
 #define SIGQUIT 3
 
 bool should_quit = false;
-#define DT_MS 100L // 0.1s
-#define DT 0.1f
+#define DT_MS 10L // 0.1s
+#define DT 0.01f
 
 void on_quit(int sig)
 {
@@ -39,7 +39,9 @@ int main(int arvc, char* argv[]) {
 
     int exit_code = 0;
     // startup routine
-    if (exit_code = initialise() != 0) {
+    if ((exit_code = initialise()) != 0) {
+	printf("Failed to start\n");
+	shutdown();
         return exit_code;
     }
 

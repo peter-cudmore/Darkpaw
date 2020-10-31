@@ -138,7 +138,7 @@ void get_next_motor_position(
 	float body_angular_velocity,
 	float height,
 	float delta_time,
-	short* motor_out[LEGS * LEG_MOTORS]){
+	unsigned* motor_out[LEGS * LEG_MOTORS]){
 
 	// servo resolution is 150->450 (so 300 samples) 
 

@@ -1,18 +1,17 @@
-ARCH = ($(strip $(uname -m)),)
+ARCH = $(shell uname -m)
 CC=cc
 CFLAGS=-Ideps -Ideps/cglm/include
 
 DIRS = src/
 OBJS = main.o model.o darkpaw.o
-
-ifeq ( $(ARCH), arm )
-LFLAGS = deps/rpi_ws281x/libws2811.a -lpigpio -lrt
+LFLAGS = -lm
+ifneq ($(filter arm%,$(ARCH) ),)
+LFLAGS += deps/rpi_ws281x/libws2811.a -lpigpio -lrt
 DIRS += src/arm/
 OBJS += camera.o led.o sensors.o servos.o
 else
 DIRS += src/x86_64/
 endif
-LFLAGS += -lm
 
 vpath %.c $(DIRS)
 

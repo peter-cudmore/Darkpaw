@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <math.h>
 #include "servos.h"
 #include "pigpio/pigpio.h"
 
@@ -72,7 +73,7 @@ int set_pwm_freq(float freq_hz) {
 }
 
 int set_pwm(unsigned channel, unsigned on, unsigned off) {
-    if (off < SERVO_MIN) || (off > SERVO_MAX)
+    if ((off < SERVO_MIN) || (off > SERVO_MAX))
         return INVALID_SERVO_COMMAND;
 
     return (
@@ -116,11 +117,20 @@ static int init_PCA9685(void) {
 };
 
 void reset_stance(void) {
-	for (int i = 0; i < 12; i++) {
+	for (unsigned i = 0; i < 12; i++) {
 		set_pwm(i, 0, 300);
     }
 };
 
+bool set_motor_angle(unsigned motor, float radians){
+	
+	int pwm = 300 + (int) (600 * radians / M_PI);  
+	if ((motor < 0)  || (motor >=12) || (pwm < 150 ) || (pwm > 450)){
+		return false;
+	}
+
+	return set_pwm(motor, 0, pwm) == 0;
+}
 
 int init_servos(void) {
     
