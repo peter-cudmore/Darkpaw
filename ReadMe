@@ -1,3 +1,5 @@
 # Dependencies
 
 - pigpio  
+- cglm
+- rpi_ws281x
