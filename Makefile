@@ -2,8 +2,11 @@ ARCH = $(shell uname -m)
 CC=cc
 CFLAGS=-Ideps -Ideps/cglm/include
 
-DIRS = src/
-OBJS = main.o model.o darkpaw.o
+DIRS = src/ src/test/
+OBJS = model.o darkpaw.o
+TEST_OBJS = tests.o
+MAIN_OBJS = main.o
+
 LFLAGS = -lm
 ifneq ($(filter arm%,$(ARCH) ),)
 LFLAGS += deps/rpi_ws281x/libws2811.a -lpigpio -lrt
@@ -18,15 +21,22 @@ vpath %.c $(DIRS)
 ODIR = obj
 
 OBJ =  $(patsubst %.o, $(ODIR)/%.o, $(OBJS))
+MAIN = $(patsubst %.o, $(ODIR)/%.o, $(MAIN_OBJS))
+TEST = $(patsubst %.o, $(ODIR)/%.o, $(TEST_OBJS))
+ALL = $(OBJ) $(MAIN) $(TEST)
 
-main: $(OBJ) 
+main: $(OBJ) $(MAIN)
 	$(CC) -o $@ $^ $(LFLAGS)
 
-$(OBJ): $(ODIR)/%.o: %.c
+$(ALL): $(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
+test: $(OBJ) $(TEST) 
+	$(CC) -o $@ $^ $(LFLAGS)
+	./test
 
-.PHONY: clean
+
+.PHONY: clean test
 
 $(ODIR):
 	mdkir $(ODIR)

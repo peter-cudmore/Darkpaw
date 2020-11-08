@@ -11,12 +11,13 @@ float sign_f(float x) {
 	return x < 0 ? -1.0f : 1.0f;
 }
 
-int angle_to_pwm(float angle) {
-	return (int) round((1 + angle / M_2_PI) * MOTOR_ZERO);
+int angle_to_pwm(float radians) {
+	int pwm = MOTOR_ZERO + round(MOTOR_ZERO * radians / M_PI_2);
+	return pwm;
 }
 
 float pwm_to_angle(int pwm) {
-	return M_PI * (((float)pwm) / MOTOR_ZERO - 1.0f);
+	return  (((float)pwm) / MOTOR_ZERO - 1.0f) * M_PI_2;
 }
 
 unsigned get_servo_index(enum Leg leg, enum MotorPosition position) {
@@ -43,7 +44,7 @@ float solve_implicit_atan(float cos_coeff, float sin_coeff, float remainder)
 	return acosf(-remainder / c) - phi;
 }
 
-void get_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array) {
+void angles_to_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array) {
 	
 	float s_a = sinf(*angles[TorsoLeg]);
 	float s_d = sinf(*angles[LegTriangle]);
@@ -66,7 +67,8 @@ void get_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array) {
 
 };
 
-void solve_leg_angles(int motor_pwm[3], LegAngles *out_angles) {
+
+void solve_leg_angles(unsigned motor_pwm[3], LegAngles out_angles) {
 	float u_b = pwm_to_angle(motor_pwm[Angle]);
 	float u_h = pwm_to_angle(motor_pwm[Height]);
 	float u_r = pwm_to_angle(motor_pwm[Radius]);
@@ -83,14 +85,17 @@ void solve_leg_angles(int motor_pwm[3], LegAngles *out_angles) {
 	float cos_coeff_h = -650.0 * cos(u_h) - 338.0;
 	float sin_coeff_h = -650.0 * sin(u_h) - 1664.0;
 	float remainder_h = 800.0 * sin(u_h) + 162.5 * cos(u_h) + 602.5;
-
-	*out_angles[TorsoServoArm] = u_b;
-	*out_angles[TorsoLeg] = solve_implicit_atan(cos_coeff_b, sin_coeff_b, remainder_b);
-	*out_angles[BottomServoArm] = u_h;
-	*out_angles[LegTriangle] = solve_implicit_atan(cos_coeff_h, sin_coeff_h, remainder_h);
-	*out_angles[TopServoArm] = u_r;
-	*out_angles[LegY] = solve_implicit_atan(cos_coeff_r, sin_coeff_r, remainder_r);
+	
+	out_angles[TorsoServoArm] = u_b;
+	out_angles[TorsoLeg] = solve_implicit_atan(cos_coeff_b, sin_coeff_b, remainder_b);
+	out_angles[BottomServoArm] = u_h;
+	out_angles[LegTriangle] = solve_implicit_atan(cos_coeff_h, sin_coeff_h, remainder_h);
+	out_angles[TopServoArm] = u_r;
+	out_angles[LegY] = solve_implicit_atan(cos_coeff_r, sin_coeff_r, remainder_r);
+	
 }
+
+
 
 void update_state_from_motors(struct Darkpaw* darkpaw) {
 	
@@ -101,8 +106,8 @@ void update_state_from_motors(struct Darkpaw* darkpaw) {
 	glm_vec3_zero(running_sum);
 	
 	for (int i = 0; i < LEGS; i++) {
-		solve_leg_angles(darkpaw->motor_positions[i], &(darkpaw->angles[i]));
-		get_leg_position(i, &(darkpaw->angles[i]), &(darkpaw->foot_positons[i]));
+		solve_leg_angles(darkpaw->motor_positions[i], darkpaw->angles[i]);
+		angles_to_leg_position(i, &(darkpaw->angles[i]), &(darkpaw->foot_positons[i]));
 		if (darkpaw->is_planted[i]) {
 			glm_vec3_add(darkpaw->foot_positons[i], running_sum, running_sum);
 			num_planted++;
@@ -164,74 +169,104 @@ typedef struct SearchElement {
 	int motor_values[LEG_MOTORS];
 } SearchElement;
 
-void fill_neighbours(enum Leg leg, 
-					 int motor_now[3],
-					 vec3 desired_position,
-					 SearchElement elements[2][2][2]) {
-	LegAngles temp_angles;
-	vec3 this_position;
-	
-	for (int i = -1; i < 2; i +=2) {
-		for (int j = -1; j < 2; j += 2) {
-			for (int k = -1; k < 2; k+= 2) {
-				elements[1 + i][1 + j][1 + k].motor_values[0] = motor_now[0] + i;
-				elements[1 + i][1 + j][1 + k].motor_values[1] = motor_now[1] + j;
-				elements[1 + i][1 + j][1 + k].motor_values[2] = motor_now[2] + k;
-				solve_leg_angles(elements[1 + i][1 + j][1 + k].motor_values, &temp_angles);
-				get_leg_position(leg, &temp_angles, &this_position);
-				elements[1 + i][1 + j][1 + k].distance = glm_vec3_distance2(this_position, desired_position);
-			}
-		}
+// #define LEG_MOTORS_CUBED LEG_MOTORS * LEG_MOTORS * LEG_MOTORS
+
+
+enum Directions {NO_DIR = -1, UP = 0, DOWN, LEFT, RIGHT, FORWARDS, BACK, TOTAL_DIR};
+enum Directions inverse_direction[TOTAL_DIR] = {
+	DOWN,
+	UP,
+	RIGHT,
+	LEFT,
+	BACK,
+	FORWARDS
+};
+
+void add_u3(unsigned a[3], int b[3], unsigned out[3]) {
+	for (int i = 0; i < 3; i++) {
+		out[i] = a[i] + b[i];
 	}
 }
+
+bool are_motors_valid(unsigned values[LEG_MOTORS]) {
+	for (int i = 0; i < LEG_MOTORS; i++) {
+		if ((values[i] > 450) || (values[i] < 150)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]){
+
+	unsigned best_motor_values[LEG_MOTORS] = { MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO };
+	int motor_steps[TOTAL_DIR][LEG_MOTORS] = {
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{0, 0, -1},
+		{1, 0, 0},
+		{-1, 0, 0}
+	};
+	unsigned zero[3] = { 0,0,0 };
+	unsigned test_motor_values[LEG_MOTORS];
+	LegAngles test_angles;
+	float test_distance, best_distance;
+	unsigned steps_left = 200;
+	vec3 test_pos, difference;
+	enum Directions best_dir = NO_DIR, last_step = NO_DIR;
+
+	if (current_servos_setpoints != NULL) {
+		add_u3(current_servos_setpoints, zero, best_motor_values);
+	}
+	
+	solve_leg_angles(best_motor_values, test_angles);
+	
+	angles_to_leg_position(leg, &test_angles, &test_pos);
+	glm_vec3_sub(test_pos, target, difference);
+	best_distance = glm_vec3_norm(difference);
+	
+	while (steps_left > 0) {
+		for (int dir = 0; dir < TOTAL_DIR; dir++) {
+			if (dir != last_step) {
+				add_u3(best_motor_values, (motor_steps[dir]), test_motor_values);
+				if (!are_motors_valid(test_motor_values)) {
+					continue;
+				}
+				solve_leg_angles(test_motor_values, test_angles);
+				angles_to_leg_position(leg, &test_angles, &test_pos);
+				glm_vec3_sub(test_pos, target, difference);
+				test_distance = glm_vec3_norm(difference);
+				if (test_distance < best_distance) {
+					best_dir = dir;
+					best_distance = test_distance;
+				}
+			}
+		}
+		
+		if (best_dir == NO_DIR) {
+			break;
+		}
+
+		last_step = inverse_direction[best_dir];
+		add_u3(best_motor_values, (motor_steps[best_dir]), best_motor_values);
+		best_dir = NO_DIR;
+
+		steps_left--;
+	}
+	solve_leg_angles(best_motor_values, *out_angles);
+	
+	return true;
+}
+
+
+
 
 
 void stroke_phase(	vec3 desired_position, 
 					enum Leg leg, 
-					int motor_now[LEG_MOTORS], 
-					int motor_desired[LEG_MOTORS]) {
+					unsigned motor_now[LEG_MOTORS], 
+					unsigned motor_desired[LEG_MOTORS]) {	
 	
 	
-	vec3 temp_position;
-	LegAngles temp_angles;
-	SearchElement best_element;
-	SearchElement neighbours[2][2][2];
-	bool found = false;
-	unsigned max_steps = 100, current_step=0;
-
-	
-	for (unsigned i = 0; i < LEG_MOTORS; i++) {
-		best_element.motor_values[i] = motor_now[i];
-	}
-
-	solve_leg_angles(best_element.motor_values, &temp_angles);
-	get_leg_position(leg, &temp_angles, &temp_position);
-	best_element.distance = glm_vec3_distance2(temp_position, desired_position);
-	// for each surroudning element
-	// compute the distance
-	// set the 
-
-	while ((found == false) && (max_steps > current_step)){
-		
-		fill_neighbours(leg, best_element.motor_values, desired_position, neighbours);
-
-		found = true;
-		for (int i = -1; i < 2; i += 2) {
-			for (int j = -1; j < 2; j += 2) {
-				for (int k = -1; k < 2; k += 2) {
-					if (neighbours[i][j][k].distance < best_element.distance) {
-						for (unsigned l = 0; l < LEG_MOTORS; l++) {
-							best_element.motor_values[l] = neighbours[i][j][k].motor_values[l];
-						}
-						best_element.distance = neighbours[i][j][k].distance;
-						found = false;
-					}
-				}
-			} 
-		} 
-		current_step++;
-	} 
-	for (unsigned i = 0; i < LEG_MOTORS; i++) {
-		motor_desired[i] = best_element.motor_values[i];
-	}
 }

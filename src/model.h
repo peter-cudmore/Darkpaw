@@ -4,20 +4,19 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#define LEGS 4
-#define LEG_MOTORS 3
-
 enum Leg {
 	FrontLeft = 0,
 	BackLeft = 1,
 	FrontRight = 2,
-	BackRight = 3
+	BackRight = 3,
+	LEGS
 };
 
 enum MotorPosition {
 	Angle = 0,
 	Height = 1,
-	Radius = 2
+	Radius = 2,
+	LEG_MOTORS
 };
 
 enum LegConfigurationAngles {
@@ -30,11 +29,26 @@ enum LegConfigurationAngles {
 	LEG_CONFIGURATION_SIZE
 };
 
-
+enum StrokePhase {
+	Planted = 0,
+	Power,
+	Lifting, 
+	Reseting,
+	Planting
+};
 
 unsigned get_servo_index(enum Leg leg, enum MotorPosition position);
 
 typedef float LegAngles[LEG_CONFIGURATION_SIZE];
+
+struct LegState {
+	float		current_angles[LEG_CONFIGURATION_SIZE];
+	unsigned	servos_setpoints[LEG_MOTORS];
+	vec3		displacement;						//relative to rest.
+	enum Leg	leg;
+	enum StrokePhase  phase;
+
+};
 
 struct Darkpaw 
 {
@@ -47,7 +61,11 @@ struct Darkpaw
 
 struct Darkpaw* new_model(void);
 
-void get_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array);
+void angles_to_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array);
+
+bool leg_position_to_angles(enum Leg leg, 
+	vec3 target,
+	LegAngles* out_angles, unsigned current_servos_setpoints[3]);
 
 void get_next_motor_position(
 		struct Darkpaw *darkpaw, 
@@ -58,6 +76,8 @@ void get_next_motor_position(
 		unsigned* motor_out[LEGS * LEG_MOTORS]);
 
 
+int angle_to_pwm(float radians);
+float pwm_to_angle(int pwm);
 #endif // !MODEL_H
 
 
