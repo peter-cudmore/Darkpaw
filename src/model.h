@@ -58,10 +58,10 @@ struct Darkpaw
     unsigned   motor_positions[LEGS][LEG_MOTORS];
     vec3       centre_of_pressure;		        // in body frame
 };
-
+void solve_leg_angles(unsigned motor_pwm[3], LegAngles out_angles);
 struct Darkpaw* new_model(void);
 
-void angles_to_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array);
+void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array);
 
 bool leg_position_to_angles(enum Leg leg, 
 	vec3 target,

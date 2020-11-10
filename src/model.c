@@ -1,5 +1,6 @@
 #include "model.h"
 #include <math.h>
+#include <assert.h>
 
 #define MOTOR_ZERO 300
 #define eps 0.0001f
@@ -28,43 +29,50 @@ float solve_implicit_atan(float cos_coeff, float sin_coeff, float remainder)
 {
 	float abs_sin_coeff = fabsf(sin_coeff);
 	float abs_cos_coeff = fabsf(cos_coeff);
-	float phi, c;
+	float phi, c, result; 
 
 	if (abs_cos_coeff < eps * abs_sin_coeff) {
 			// function is approximately  A*sin(x) + remainder = 0
-		return asinf(-remainder / sin_coeff);
+		result = asinf(-remainder / sin_coeff);
 	}
 	else if (abs_sin_coeff < eps * abs_cos_coeff) {
 		// function is approex B* cos(x) + remainder = 0
-		return acosf(-remainder / cos_coeff);
+		result =  acosf(-remainder / cos_coeff);
 	}
-	c = sign_f(cos_coeff) * sqrtf(cos_coeff * cos_coeff + sin_coeff * sin_coeff);
-	phi = atan2f(-sin_coeff, cos_coeff);
-	// now have c*cos(x + phi) = - remainder
-	return acosf(-remainder / c) - phi;
+	else
+	{
+		c = sign_f(cos_coeff) * sqrtf(cos_coeff * cos_coeff + sin_coeff * sin_coeff);
+		phi = atan2f(-sin_coeff, cos_coeff);
+		// now have c*cos(x + phi) = - remainder
+		result = acosf(-remainder / c) - phi;
+		if (result > M_PI_2) {result -= M_PI;}
+	}
+
+	return result;
 }
 
-void angles_to_leg_position(enum Leg leg, LegAngles *angles, vec3 *out_array) {
-	
-	float s_a = sinf(*angles[TorsoLeg]);
-	float s_d = sinf(*angles[LegTriangle]);
-	float s_y = sinf(*angles[LegY]);
-	float c_a = cosf(*angles[TorsoLeg]);
-	float c_d = cosf(*angles[LegTriangle]);
-	float c_y = cosf(*angles[LegY]);
 
-	*out_array[0] = -32.0 * s_a * s_d - 15.0 * s_a * s_y + 75.0 * s_a * c_y + 75.0 * s_y * c_a + 32.0 * c_a * c_d + 15.0 * c_a * c_y + 66.0 * c_a + 42.0;
+void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array) {
+	
+	float s_a = sinf(angles[TorsoLeg]);
+	float s_d = sinf(angles[LegTriangle]);
+	float s_y = sinf(angles[LegY]);
+	float c_a = cosf(angles[TorsoLeg]);
+	float c_d = cosf(angles[LegTriangle]);
+	float c_y = cosf(angles[LegY]);
 
-	if (leg == BackLeft || leg == BackRight) 
-		*out_array[0] *= -1.0;
-	
-	*out_array[1] = 75.0 * s_a * s_y + 32.0 * s_a * c_d + 15.0 * s_a * c_y + 66.0 * s_a + 42.0;
-	
-	if (leg == FrontRight || leg == FrontLeft)
-		*out_array[1] *= -1.0;
-	
-	*out_array[2] = 32.0 * s_d + 15.0 * s_y - 75.0 * c_y;
+	out_array[0] = -32.0f * s_a * s_d - 15.0f * s_a * s_y + 75.0f * s_a * c_y + 75.0f * s_y * c_a + 32.0f * c_a * c_d + 15.0f * c_a * c_y + 66.0f * c_a + 42.0f;
 
+	if ((leg == BackLeft)|| (leg == BackRight))
+		out_array[0] *= -1.0f;
+	
+	out_array[1] = -(75.0f * s_a * s_y + 32.0f * s_a * c_d + 15.0f * s_a * c_y + 66.0f * s_a + 42.0f);
+
+	if ((leg == FrontRight) || (leg == BackRight))
+		out_array[1] *= -1.0f;
+	
+	out_array[2] = 32.0f * s_d + 15.0f * s_y - 75.0f * c_y;
+	
 };
 
 
@@ -107,7 +115,7 @@ void update_state_from_motors(struct Darkpaw* darkpaw) {
 	
 	for (int i = 0; i < LEGS; i++) {
 		solve_leg_angles(darkpaw->motor_positions[i], darkpaw->angles[i]);
-		angles_to_leg_position(i, &(darkpaw->angles[i]), &(darkpaw->foot_positons[i]));
+		angles_to_leg_position(i, darkpaw->angles[i], darkpaw->foot_positons[i]);
 		if (darkpaw->is_planted[i]) {
 			glm_vec3_add(darkpaw->foot_positons[i], running_sum, running_sum);
 			num_planted++;
@@ -222,7 +230,7 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 	
 	solve_leg_angles(best_motor_values, test_angles);
 	
-	angles_to_leg_position(leg, &test_angles, &test_pos);
+	angles_to_leg_position(leg, test_angles, test_pos);
 	glm_vec3_sub(test_pos, target, difference);
 	best_distance = glm_vec3_norm(difference);
 	
@@ -234,7 +242,7 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 					continue;
 				}
 				solve_leg_angles(test_motor_values, test_angles);
-				angles_to_leg_position(leg, &test_angles, &test_pos);
+				angles_to_leg_position(leg, test_angles, test_pos);
 				glm_vec3_sub(test_pos, target, difference);
 				test_distance = glm_vec3_norm(difference);
 				if (test_distance < best_distance) {
