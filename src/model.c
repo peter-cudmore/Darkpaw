@@ -54,24 +54,41 @@ float solve_implicit_atan(float cos_coeff, float sin_coeff, float remainder)
 
 void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array) {
 	
+
 	float s_a = sinf(angles[TorsoLeg]);
-	float s_d = sinf(angles[LegTriangle]);
-	float s_y = sinf(angles[LegY]);
+	float s_h = sinf(angles[LegTriangle]);
+	float s_r = sinf(angles[LegY]);
 	float c_a = cosf(angles[TorsoLeg]);
-	float c_d = cosf(angles[LegTriangle]);
-	float c_y = cosf(angles[LegY]);
+	float c_h = cosf(angles[LegTriangle]);
+	float c_r = cosf(angles[LegY]);
 
-	out_array[0] = -32.0f * s_a * s_d - 15.0f * s_a * s_y + 75.0f * s_a * c_y + 75.0f * s_y * c_a + 32.0f * c_a * c_d + 15.0f * c_a * c_y + 66.0f * c_a + 42.0f;
+	float s_0 = sinf(angles[TorsoLeg] - angles[LegY]);
+	float s_1 = sinf(angles[TorsoLeg] + angles[LegY]);
+	float s_2 = sinf(angles[TorsoLeg] - angles[LegTriangle]);
+	float s_3 = sinf(angles[TorsoLeg] + angles[LegTriangle]);
 
-	if ((leg == BackLeft)|| (leg == BackRight))
-		out_array[0] *= -1.0f;
 	
-	out_array[1] = -(75.0f * s_a * s_y + 32.0f * s_a * c_d + 15.0f * s_a * c_y + 66.0f * s_a + 42.0f);
+	float c_0 = cosf(angles[TorsoLeg] - angles[LegY]);
+	float c_1 = cosf(angles[TorsoLeg] + angles[LegY]);
+	float c_2 = cosf(angles[TorsoLeg] - angles[LegTriangle]);
+	float c_3 = cosf(angles[TorsoLeg] + angles[LegTriangle]);
+		
+	float px = -37.5 * c_0 + 37.5 * c_1 + 75.0 * c_r - 7.5 * s_0 - 7.5 * s_1 - 16.0 * s_2 - 16.0 * s_3 - 66.0 * s_a - 32.0 * s_h - 15.0 * s_r + 42.0;
+	float py = 15.0 * c_1 + 32.0 * c_3 + 66.0 * c_a + 75.0 * s_1 + 42.0;
+	float pz = -75.0 * c_r + 32.0 * s_h + 15.0 * s_r;
 
+	if ((leg == BackLeft) || (leg == BackRight)) {
+		out_array[0] = -px;
+	}
+	else {
+		out_array[0] = px;
+	}
+	
+	out_array[1] = py;
 	if ((leg == FrontRight) || (leg == BackRight))
 		out_array[1] *= -1.0f;
 	
-	out_array[2] = 32.0f * s_d + 15.0f * s_y - 75.0f * c_y;
+	out_array[2] = pz;
 	
 };
 
@@ -81,28 +98,26 @@ void solve_leg_angles(unsigned motor_pwm[3], LegAngles out_angles) {
 	float u_h = pwm_to_angle(motor_pwm[Height]);
 	float u_r = pwm_to_angle(motor_pwm[Radius]);
 
-	float cos_coeff_b = 400.0 * sinf(u_b) + 900.0 * cosf(u_b) - 1344.0;
-	float sin_coeff_b = 900.0 * sinf(u_b) + 400.0 * cosf(u_b) - 3024.0;
-	float remainder_b = 1872.25 - 1050.0 * sinf(u_b);
-	// result = solve_implicit_atan(cos_coeff_b, sin_coeff_b, remainder_b)
+	float bodyangle_cos_coeff = -400.0 * sinf(u_b) - 900.0 * cosf(u_b) - 1344.0;
+	float bodyangle_sin_coeff = -900.0 * sinf(u_b) + 400.0 * cosf(u_b) - 3024.0;
+	float bodyangle_remainder = 1050.0 * sinf(u_b) + 1872.25;
 
-	float cos_coeff_r = 225.0 * sinf(u_r) - 1170.0 * cosf(u_r) - 987.0;
-	float sin_coeff_r = -1170.0 * sinf(u_r) - 225.0 * cosf(u_r) + 2398.5;
-	float remainder_r = -960.0 * sinf(u_r) + 195.0 * cosf(u_r) + 2192.5;
+	float radial_angle_cos_coeff = -225.0 * sinf(u_r) - 1170.0 * cosf(u_r) - 987.0;
+	float radial_angle_sin_coeff = -1170.0 * sinf(u_r) + 225.0 * cosf(u_r) - 2398.5;
+	float radial_angle_remainder = 960.0 * sinf(u_r) + 195.0 * cosf(u_r) + 2192.5;
 
-	float cos_coeff_h = -650.0 * cos(u_h) - 338.0;
-	float sin_coeff_h = -650.0 * sin(u_h) - 1664.0;
-	float remainder_h = 800.0 * sin(u_h) + 162.5 * cos(u_h) + 602.5;
+	float height_angle_cos_coeff = -650.0 * cosf(u_h) - 338.0;
+	float height_angle_sin_coeff = 1664.0 - 650.0 * sinf(u_h);
+	float height_angle_remainder = -800.0 * sinf(u_h) + 162.5 * cosf(u_h) + 602.5;
 	
 	out_angles[TorsoServoArm] = u_b;
-	out_angles[TorsoLeg] = solve_implicit_atan(cos_coeff_b, sin_coeff_b, remainder_b);
+	out_angles[TorsoLeg] = solve_implicit_atan(bodyangle_cos_coeff, bodyangle_sin_coeff, bodyangle_remainder);
 	out_angles[BottomServoArm] = u_h;
-	out_angles[LegTriangle] = solve_implicit_atan(cos_coeff_h, sin_coeff_h, remainder_h);
+	out_angles[LegTriangle] = solve_implicit_atan(height_angle_cos_coeff, height_angle_sin_coeff, height_angle_remainder);
 	out_angles[TopServoArm] = u_r;
-	out_angles[LegY] = solve_implicit_atan(cos_coeff_r, sin_coeff_r, remainder_r);
-	
-}
+	out_angles[LegY] = solve_implicit_atan(radial_angle_cos_coeff, radial_angle_sin_coeff, radial_angle_remainder);
 
+}
 
 
 void update_state_from_motors(struct Darkpaw* darkpaw) {
@@ -181,14 +196,7 @@ typedef struct SearchElement {
 
 
 enum Directions {NO_DIR = -1, UP = 0, DOWN, LEFT, RIGHT, FORWARDS, BACK, TOTAL_DIR};
-enum Directions inverse_direction[TOTAL_DIR] = {
-	DOWN,
-	UP,
-	RIGHT,
-	LEFT,
-	BACK,
-	FORWARDS
-};
+enum Directions inverse_direction[TOTAL_DIR] = {DOWN, UP, RIGHT, LEFT, BACK, FORWARDS};
 
 void add_u3(unsigned a[3], int b[3], unsigned out[3]) {
 	for (int i = 0; i < 3; i++) {
@@ -205,7 +213,7 @@ bool are_motors_valid(unsigned values[LEG_MOTORS]) {
 	return true;
 }
 
-bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]){
+bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]) {
 
 	unsigned best_motor_values[LEG_MOTORS] = { MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO };
 	int motor_steps[TOTAL_DIR][LEG_MOTORS] = {
@@ -220,9 +228,10 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 	unsigned test_motor_values[LEG_MOTORS];
 	LegAngles test_angles;
 	float test_distance, best_distance;
-	unsigned steps_left = 200;
+	unsigned steps_left = 1000;
 	vec3 test_pos, difference;
 	enum Directions best_dir = NO_DIR, last_step = NO_DIR;
+	bool at_boundary = false;
 
 	if (current_servos_setpoints != NULL) {
 		add_u3(current_servos_setpoints, zero, best_motor_values);
@@ -239,6 +248,7 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 			if (dir != last_step) {
 				add_u3(best_motor_values, (motor_steps[dir]), test_motor_values);
 				if (!are_motors_valid(test_motor_values)) {
+					at_boundary = true;
 					continue;
 				}
 				solve_leg_angles(test_motor_values, test_angles);
@@ -259,12 +269,13 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 		last_step = inverse_direction[best_dir];
 		add_u3(best_motor_values, (motor_steps[best_dir]), best_motor_values);
 		best_dir = NO_DIR;
-
+		at_boundary = false;
 		steps_left--;
 	}
+
 	solve_leg_angles(best_motor_values, *out_angles);
 	
-	return true;
+	return (!at_boundary);
 }
 
 

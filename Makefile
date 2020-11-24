@@ -2,7 +2,7 @@ ARCH = $(shell uname -m)
 CC=cc
 CFLAGS=-Ideps -Ideps/cglm/include
 
-DIRS = src/ src/test/
+DIRS = src/ src/tests/
 OBJS = model.o darkpaw.o
 TEST_OBJS = tests.o
 MAIN_OBJS = main.o

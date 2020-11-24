@@ -63,9 +63,8 @@ struct Darkpaw* new_model(void);
 
 void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array);
 
-bool leg_position_to_angles(enum Leg leg, 
-	vec3 target,
-	LegAngles* out_angles, unsigned current_servos_setpoints[3]);
+bool leg_position_to_angles(enum Leg leg,  vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]);
+
 
 void get_next_motor_position(
 		struct Darkpaw *darkpaw, 
