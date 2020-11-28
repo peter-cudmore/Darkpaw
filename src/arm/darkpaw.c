@@ -108,8 +108,8 @@ bool atof_failed(float result, char* string) {
 bool repl_loop() {
     char buffer[80];
     char* cmd;
-    char sep = " ";
-    char* leg, param_1, param_2, param_3;
+    char *sep = " ";
+    char* leg, *param_1, *param_2, *param_3;
     int leg_int;
     // commands
     // pwm leg motor value
@@ -117,7 +117,7 @@ bool repl_loop() {
     // pos leg dx dy dz
 
     while (fgets(buffer, 80, stdin) != NULL) {
-        
+
         cmd = strtok(buffer, sep);
         leg = strtok(NULL, sep);
         param_1 = strtok(NULL, sep);
@@ -125,46 +125,59 @@ bool repl_loop() {
         param_3 = strtok(NULL, sep);
 
         if (cmd == NULL) {
+            if (strcmp(buffer, "quit") == 0) {
+                return true;
+            }
             continue;
         }
 
-        if (strcmp(cmd, "quit") == 0 ) {
-            return true;
-        }
-        
-        if ((leg == NULL) || ((leg_int = atoi(leg) == 0) && (strcmp(leg, "0") != 0)) || (leg_int<0) || (leg_int > 3))
+        if ((leg == NULL) || ((leg_int = atoi(leg) == 0) && (strcmp(leg, "0") != 0)) || (leg_int < 0) || (leg_int > 3))
         {
             printf("Invalid Command - Leg not spefied\n");
             continue;
-        } 
+        }
         if ((param_1 == NULL) && (param_2 == NULL)) {
             printf("Invalid command - not enough parameters\n");
-        } else if ((strcmp(cmd, "pwm") == 0) && ) {
+        }
+        else if ((strcmp(cmd, "pwm") == 0)) {
             int motor = atoi(param_1);
             int value = atoi(param_2);
-            if (atoi_failed(motor, param_1)|| atoi_failed(value, param_2) || (value < SERVO_MIN) || (value > SERVO_MAX)) {printf("Invalid Command\n"); }
+            if (atoi_failed(motor, param_1) || atoi_failed(value, param_2) || (value < SERVO_MIN) || (value > SERVO_MAX)) { printf("Invalid Command\n"); }
             else {
-                unsigned channel = motor + leg_int * 4;
+                unsigned channel = (motor + leg_int * 4);
                 unsigned off = value;
-                if (set_pwm(channel, 0, unsigned off) <0)   printf("Could not set pwm value\n");
+                printf("Setting channel %u to %u (leg: %i motor: %i)...", channel, value, leg_int, motor);
+                if (set_pwm(channel, 0, off) < 0) {
+                    printf("done\n");
+                }
+                else { 
+                    printf("failed\n");
+                }
+                
             }
         }
         else if (strcmp(cmd, "angle") == 0)
         {
             int joint = atoi(param_1);
             int degs = atof(param_2);
-            
+
             if (atoi_failed(joint, param_1) || atoi_failed(degs, param_2) || (joint < 0) || (joint > 3) || (degs < 0) || degs > 360) {
                 printf("Could not set angle\n");
-            }
-            else {
-                float rads = (float)degs * M_2_PI / 360;
+            } else {
+                float rads = (float)degs * M_2_PI / 360.0f;
                 unsigned channel = leg_int * 4 + joint;
-                set_motor_angle(channel, rads);
+                
+                printf("Setting channel %u to angle: %i (leg: %i motor: %i)...", channel, rads, leg_int, joint);
+                if (set_motor_angle(channel, rads)) {
+                    printf("done\n");
+                }
+                else {
+                    printf("failed\n");
+                }
             }
         }
-        else if (strcmp(cmd, "pos") == 0) {
-            
+        else if ((strcmp(cmd, "pos") == 0) && (param_3!=NULL)) {
+
             float  x = atof(param_1);
             float y = atof(param_2);
             float z = atof(param_3);
@@ -177,21 +190,25 @@ bool repl_loop() {
                     leg_int < 2 ? y + leg_rest_y : y - leg_rest_y,
                     leg_rest_z
                 };
-                unsigned motor[3] = { 0,0,0 };
+                unsigned motor[3] = { 0, 0, 0 };
                 LegAngles angles;
 
-                leg_position_to_angles(leg_int, position, &angles, motor);
+                if (leg_position_to_angles(leg_int, position, &angles, motor)) {
+                    set_motor_angle(Angle, angles[TorsoServoArm]);
+                    set_motor_angle(Radius, angles[LegY]);
+                    set_motor_angle(Height, angles[LegTriangle]);
+                    printf("Setting angles to (%f, %f,%f)", angles[TorsoServoArm], angles[LegY], angles[LegTriangle]);
 
-                set_motor_angle(Angle, angles[TorsoServoArm]);
-                set_motor_angle(Radius, angles[LegY]);
-                set_motor_angle(Height, angles[LegTriangle]);
+                }  else {
+                    printf("Could not solve angles for positons\n");
+                };
             }
         }
         else {
             printf("Invalid Command\n");
         }
     }
-)
+}
 
 void execute_pwm(int leg, char* motor_string, char* value_string) {
     
