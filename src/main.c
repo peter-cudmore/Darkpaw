@@ -47,12 +47,13 @@ int main(int arvc, char* argv[]) {
 
     signal(SIGINT, on_quit);
     signal(SIGQUIT, on_quit);
-    
+    /*
     while (!should_quit) {
         step_test(DT);
         nsleep(DT_MS);
     }
-
+    */ 
+    repl_loop();
     // each tick
     // read sensors
     // read command

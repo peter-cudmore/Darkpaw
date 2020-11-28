@@ -1,5 +1,7 @@
 #include <math.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "../darkpaw.h"
 #include "../model.h"
@@ -65,6 +67,9 @@ void shutdown() {
 #define MAX(a, b) a > b ? a : b 
 #define WRAP(a) a > M_2_PI ? a - M_2_PI : a
 // 1 -> 3 -> 2 -> 4 
+const float leg_rest_x = 65.603f;
+const float leg_rest_y = 45.364f;
+const float leg_rest_z = -2.9311f;
 
 void step_test(float delta_time){
 
@@ -72,9 +77,6 @@ void step_test(float delta_time){
     
     const float freq = M_PI;
     
-    const float leg_rest_x = 65.603f;
-    const float leg_rest_y = 45.364f;
-    const float leg_rest_z = -2.9311f;
     unsigned motor[3] = { 300, 300, 300};
     vec3 position = {
         leg_rest_x + 5.0f * sinf(phase),
@@ -84,13 +86,113 @@ void step_test(float delta_time){
 
     LegAngles angles;
     
-    leg_position_to_angles(FrontLeft, position, &angles, { 0, 0, 0 });
+    leg_position_to_angles(FrontLeft, position, &angles, motor);
     
     set_motor_angle(Angle, angles[TorsoServoArm]);
     set_motor_angle(Radius, angles[LegY]);
     set_motor_angle(Height, angles[LegTriangle]);      
 
 
-    phase = WRAP(phase + freq * dt);
+    phase = WRAP(phase + freq * delta_time);
 
 };
+
+bool atoi_failed(int result, char* string) {
+    return (strcmp(string, "0") != 0 && result == 0)
+}
+bool atof_failed(float result, char* string) {
+    bool is_zero = ((strcmp(string, "0") == 0) || strcmp(string, "0.0") == 0);
+    return is_zero && (result != 0.0f);
+}
+
+bool repl_loop() {
+    char buffer[80];
+    char* cmd;
+    char sep = " ";
+    char* leg, param_1, param_2, param_3;
+    int leg_int;
+    // commands
+    // pwm leg motor value
+    // angle leg joint angle
+    // pos leg dx dy dz
+
+    while (fgets(buffer, 80, stdin) != NULL) {
+        
+        cmd = strtok(buffer, sep);
+        leg = strtok(NULL, sep);
+        param_1 = strtok(NULL, sep);
+        param_2 = strtok(NULL, sep);
+        param_3 = strtok(NULL, sep);
+
+        if (cmd == NULL) {
+            continue;
+        }
+
+        if (strcmp(cmd, "quit") == 0 ) {
+            return true;
+        }
+        
+        if ((leg == NULL) || ((leg_int = atoi(leg) == 0) && (strcmp(leg, "0") != 0)) || (leg_int<0) || (leg_int > 3))
+        {
+            printf("Invalid Command - Leg not spefied\n");
+            continue;
+        } 
+        if ((param_1 == NULL) && (param_2 == NULL)) {
+            printf("Invalid command - not enough parameters\n");
+        } else if ((strcmp(cmd, "pwm") == 0) && ) {
+            int motor = atoi(param_1);
+            int value = atoi(param_2);
+            if (atoi_failed(motor, param_1)|| atoi_failed(value, param_2) || (value < SERVO_MIN) || (value > SERVO_MAX)) {printf("Invalid Command\n"); }
+            else {
+                unsigned channel = motor + leg_int * 4;
+                unsigned off = value;
+                if (set_pwm(channel, 0, unsigned off) <0)   printf("Could not set pwm value\n");
+            }
+        }
+        else if (strcmp(cmd, "angle") == 0)
+        {
+            int joint = atoi(param_1);
+            int degs = atof(param_2);
+            
+            if (atoi_failed(joint, param_1) || atoi_failed(degs, param_2) || (joint < 0) || (joint > 3) || (degs < 0) || degs > 360) {
+                printf("Could not set angle\n");
+            }
+            else {
+                float rads = (float)degs * M_2_PI / 360;
+                unsigned channel = leg_int * 4 + joint;
+                set_motor_angle(channel, rads);
+            }
+        }
+        else if (strcmp(cmd, "pos") == 0) {
+            
+            float  x = atof(param_1);
+            float y = atof(param_2);
+            float z = atof(param_3);
+            if (atof_failed(x, param_1) || atof_failed(y, param_2) || atof_failed(z, param_3)) {
+                printf("Invalid command: could not convert to positon");
+            }
+            else {
+                vec3 position = {
+                    leg_int % 2 == 0 ? x + leg_rest_x : x - leg_rest_x,
+                    leg_int < 2 ? y + leg_rest_y : y - leg_rest_y,
+                    leg_rest_z
+                };
+                unsigned motor[3] = { 0,0,0 };
+                LegAngles angles;
+
+                leg_position_to_angles(leg_int, position, &angles, motor);
+
+                set_motor_angle(Angle, angles[TorsoServoArm]);
+                set_motor_angle(Radius, angles[LegY]);
+                set_motor_angle(Height, angles[LegTriangle]);
+            }
+        }
+        else {
+            printf("Invalid Command\n");
+        }
+    }
+)
+
+void execute_pwm(int leg, char* motor_string, char* value_string) {
+    
+}

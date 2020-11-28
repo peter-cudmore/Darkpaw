@@ -22,6 +22,9 @@ void shutdown(void) {
 
 
 float t = 0.0f;
+bool repl_loop() {
+	return true;
+};
 
 
 void step_test(float dt) {
