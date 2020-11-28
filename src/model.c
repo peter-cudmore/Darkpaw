@@ -281,11 +281,11 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 
 
 
+#define MAX_EXTENSION
+#define MIN_EXTENSION 
 
-void stroke_phase(	vec3 desired_position, 
-					enum Leg leg, 
-					unsigned motor_now[LEG_MOTORS], 
-					unsigned motor_desired[LEG_MOTORS]) {	
-	
-	
+
+void phase_to_position(enum Leg leg, float phase, vec3 out_position) {
+
+
 }

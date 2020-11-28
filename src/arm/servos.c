@@ -3,6 +3,7 @@
 #include <math.h>
 #include "servos.h"
 #include "pigpio/pigpio.h"
+#include "../model.h"
 
 #define PCA9685_ADDRESS 0x40
 #define MODE1           0x00
@@ -30,9 +31,10 @@
 #define RESET           0x00
 
 
-#define SERVO_MAX  450
-#define SERVO_MIN  150
-#define SERVO_ZERO 300 
+#define SERVO_MAX  550
+#define SERVO_MIN  100
+#define SERVO_ZERO 300
+#define CHANNEL_MAX 12
 
 #define INVALID_SERVO_COMMAND -1;
 
@@ -73,7 +75,7 @@ int set_pwm_freq(float freq_hz) {
 }
 
 int set_pwm(unsigned channel, unsigned on, unsigned off) {
-    if ((off < SERVO_MIN) || (off > SERVO_MAX))
+    if ((off < SERVO_MIN) || (off > SERVO_MAX) || (channel >= CHANNEL_MAX))
         return INVALID_SERVO_COMMAND;
 
     return (
@@ -122,14 +124,8 @@ void reset_stance(void) {
     }
 };
 
-bool set_motor_angle(unsigned motor, float radians){
-	
-	int pwm = 300 + (int) (600 * radians / M_PI);  
-	if ((motor < 0)  || (motor >=12) || (pwm < 150 ) || (pwm > 450)){
-		return false;
-	}
-
-	return set_pwm(motor, 0, pwm) == 0;
+bool set_motor_angle(unsigned motor, float radians){	
+	return set_pwm(motor, 0, angle_to_pwm(radians)) == 0;
 }
 
 int init_servos(void) {

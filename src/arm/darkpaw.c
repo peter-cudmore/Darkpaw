@@ -1,3 +1,6 @@
+#include <math.h>
+#include <stdbool.h>
+
 #include "../darkpaw.h"
 #include "../model.h"
 #include "pigpio/pigpio.h"
@@ -6,8 +9,6 @@
 #include "led.h"
 #include "camera.h"
 #include "sensors.h"
-#include <stdbool.h>
-#include <math.h>
 
 #define stages 4
 
@@ -61,28 +62,35 @@ void shutdown() {
     }
 };
 
-
-const float freq = 0.2f;
-float domega = M_PI * freq;
-float rads = .0f;
-
+#define MAX(a, b) a > b ? a : b 
+#define WRAP(a) a > M_2_PI ? a - M_2_PI : a
+// 1 -> 3 -> 2 -> 4 
 
 void step_test(float delta_time){
-	
-	unsigned front_left_body = get_servo_index(FrontLeft, Radius);
-	unsigned front_right_body = get_servo_index(FrontRight, Radius);
-	unsigned rear_left_body = get_servo_index(BackLeft, Radius);
-	unsigned rear_right_body = get_servo_index(BackRight, Radius);
-//	float rads = 0.25f*M_PI;
-	
-	if (fabs(rads) > M_PI_2/2){
-		domega = -domega;
-	}
-	rads += domega*delta_time;
 
-	set_motor_angle(front_left_body, rads);
-	set_motor_angle(front_right_body, -rads);
-	set_motor_angle(rear_right_body, rads);
-	set_motor_angle(rear_left_body, -rads);
+    static float phase = 0.0f;
+    
+    const float freq = M_PI;
+    
+    const float leg_rest_x = 65.603f;
+    const float leg_rest_y = 45.364f;
+    const float leg_rest_z = -2.9311f;
+    unsigned motor[3] = { 300, 300, 300};
+    vec3 position = {
+        leg_rest_x + 5.0f * sinf(phase),
+        leg_rest_y + 2,
+        leg_rest_z + MAX(2.0f * sinf(phase + M_PI), 0)
+    };
+
+    LegAngles angles;
+    
+    leg_position_to_angles(FrontLeft, position, &angles, { 0, 0, 0 });
+    
+    set_motor_angle(Angle, angles[TorsoServoArm]);
+    set_motor_angle(Radius, angles[LegY]);
+    set_motor_angle(Height, angles[LegTriangle]);      
+
+
+    phase = WRAP(phase + freq * dt);
 
 };

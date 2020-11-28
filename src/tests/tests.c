@@ -35,8 +35,9 @@ static char* test_FK_symmetries(void) {
 
 		solve_leg_angles(motor_pwm, test_angles);
 		angles_to_leg_position(leg, test_angles, base_positions[leg]);
+		printf("Leg %i rest position: (%f %f %f)\n", leg, base_positions[leg][0], base_positions[leg][1], base_positions[leg][2]);
 		mu_assert("Z should be below COM.", base_positions[leg][2] < 0);
-
+		
 		if ((leg == FrontLeft) || (leg == FrontRight)) {
 			mu_assert("Front X should be positive ", base_positions[leg][0] > 0);
 		}
