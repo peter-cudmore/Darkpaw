@@ -25,6 +25,28 @@ unsigned get_servo_index(enum Leg leg, enum MotorPosition position) {
 	return ( 3 * (unsigned)leg) + ((unsigned) position);
 }
 
+const LegMotorConfig leg_bounds[12] = {
+	{125, 425, 300, 425, M_PI_4},
+	{175, 475, 310, 110, -M_PI_2},
+	{100, 375, 280, 0, 0.0f},
+	{125, 425, 275, 0, 0.0f},
+	{125, 425, 305, 0, 0.0f},
+	{225, 500, 315, 0, 0.0f},
+	{175, 475, 325, 0, 0.0f},
+	{125, 425, 300, 0, 0.0f},
+	{200, 450, 290, 0, 0.0f},
+	{175, 475, 310, 0, 0.0f},
+	{175, 475, 300, 0, 0.0f},
+	{150, 375, 320, 0, 0.0f}
+};
+
+const int motor_sign[4] = {
+	1,
+	-1,
+	-1,
+	1
+};
+
 float solve_implicit_atan(float cos_coeff, float sin_coeff, float remainder) 
 {
 	float abs_sin_coeff = fabsf(sin_coeff);

@@ -136,7 +136,7 @@ bool repl_loop() {
             printf("Invalid Command - Leg not spefied\n");
             continue;
         }
-        if ((param_1 == NULL) && (param_2 == NULL)) {
+        if ((param_1 == NULL) || (param_2 == NULL)) {
             printf("Invalid command - not enough parameters\n");
         }
         else if ((strcmp(cmd, "pwm") == 0)) {
@@ -147,7 +147,7 @@ bool repl_loop() {
                 unsigned channel = (motor + leg_int * 4);
                 unsigned off = value;
                 printf("Setting channel %u to %u (leg: %i motor: %i)...", channel, value, leg_int, motor);
-                if (set_pwm(channel, 0, off) < 0) {
+                if (set_pwm(channel, 0, off) != -1) {
                     printf("done\n");
                 }
                 else { 
@@ -159,7 +159,7 @@ bool repl_loop() {
         else if (strcmp(cmd, "angle") == 0)
         {
             int joint = atoi(param_1);
-            int degs = atof(param_2);
+            int degs = atoi(param_2);
 
             if (atoi_failed(joint, param_1) || atoi_failed(degs, param_2) || (joint < 0) || (joint > 3) || (degs < 0) || degs > 360) {
                 printf("Could not set angle\n");
@@ -168,7 +168,7 @@ bool repl_loop() {
                 unsigned channel = leg_int * 4 + joint;
                 
                 printf("Setting channel %u to angle: %i (leg: %i motor: %i)...", channel, rads, leg_int, joint);
-                if (set_motor_angle(channel, rads)) {
+                if (set_motor_angle(channel, rads)!= -1) {
                     printf("done\n");
                 }
                 else {
@@ -193,7 +193,7 @@ bool repl_loop() {
                 unsigned motor[3] = { 0, 0, 0 };
                 LegAngles angles;
 
-                if (leg_position_to_angles(leg_int, position, &angles, motor)) {
+                if (leg_position_to_angles(leg_int, position, &angles, motor)== true) {
                     set_motor_angle(Angle, angles[TorsoServoArm]);
                     set_motor_angle(Radius, angles[LegY]);
                     set_motor_angle(Height, angles[LegTriangle]);
@@ -208,8 +208,4 @@ bool repl_loop() {
             printf("Invalid Command\n");
         }
     }
-}
-
-void execute_pwm(int leg, char* motor_string, char* value_string) {
-    
 }
