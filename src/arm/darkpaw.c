@@ -98,8 +98,9 @@ void step_test(float delta_time){
 };
 
 bool atoi_failed(int result, char* string) {
-    return (strcmp(string, "0") != 0 && result == 0)
+    return (strcmp(string, "0") != 0) && (result == 0);
 }
+
 bool atof_failed(float result, char* string) {
     bool is_zero = ((strcmp(string, "0") == 0) || strcmp(string, "0.0") == 0);
     return is_zero && (result != 0.0f);
