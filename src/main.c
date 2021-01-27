@@ -40,8 +40,8 @@ int main(int arvc, char* argv[]) {
     int exit_code = 0;
     // startup routine
     if ((exit_code = initialise()) != 0) {
-	printf("Failed to start\n");
-	shutdown();
+	    printf("Failed to start\n");
+	    shutdown();
         return exit_code;
     }
 
@@ -53,7 +53,7 @@ int main(int arvc, char* argv[]) {
         nsleep(DT_MS);
     }
     */ 
-    repl_loop();
+    repl_loop(&should_quit);
     // each tick
     // read sensors
     // read command

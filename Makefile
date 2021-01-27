@@ -35,8 +35,11 @@ test: $(OBJ) $(TEST)
 	$(CC) -o $@ $^ $(LFLAGS)
 	./test
 
+kine_test:
+	$(CC) src/kinematics.c src/tests/kine_tests.c -o kine_test $(CFLAGS) $(LFLAGS) -Isrc  -DDEBUG
+	./kine_test
 
-.PHONY: clean test
+.PHONY: clean test kine_test
 
 $(ODIR):
 	mdkir $(ODIR)
@@ -44,4 +47,5 @@ $(ODIR):
 clean:
 	-rm -f main
 	-rm -f $(ODIR)/*.o
-		
+	-rm -f test
+	-rm -f kine_test

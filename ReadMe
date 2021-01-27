@@ -1,5 +1,12 @@
-# Dependencies
+# Darkpaw Control Systems.
 
-- pigpio  
-- cglm
-- rpi_ws281x
+This project is a model-based control system for the Adeept Darkpaw kit (https://www.adeept.com/darkpaw_p0125.html).
+
+Target platform:	RPi3b+ running Raspbian.
+Dependencies:		pigpio, rpi_ws281x, cglm
+
+
+Current Todo:
+1. Write tests for forwards and inverse kinematic models 
+2. Get cross compilation build script working
+3. Make sure test cases map onto real-world positions

@@ -31,9 +31,6 @@
 #define RESET           0x00
 
 
-#define SERVO_MAX  550
-#define SERVO_MIN  100
-#define SERVO_ZERO 300
 #define CHANNEL_MAX 12
 
 #define INVALID_SERVO_COMMAND -1;
@@ -125,7 +122,7 @@ void reset_stance(void) {
 };
 
 bool set_motor_angle(unsigned motor, float radians){	
-	return set_pwm(motor, 0, angle_to_pwm(radians)) == 0;
+	return set_pwm(motor, 0, angle_to_pwm(motor, radians)) == 0;
 }
 
 int init_servos(void) {

@@ -1,17 +1,31 @@
 #include <cglm/cglm.h>
 #include <stdbool.h>
+#include "types.h"
 
 #ifndef MODEL_H
 #define MODEL_H
 
 typedef struct 
 {
-	unsigned min;
+	unsigned min;		
 	unsigned max;
 	unsigned rest;
 	unsigned reference_pwm;
 	float reference_angle;
+	float gradient;
 } LegMotorConfig;
+
+/* Linear Model Parameters
+*
+* Let:
+*	- u_i be the pwm value of the ith motor.
+*   - w_i be the angle
+*
+* Then:
+*	- min < u_i < max
+*   - w_i = grad * (u_i - rest)
+*
+*/
 
 // motor bounds
 // channel min max
@@ -29,10 +43,9 @@ typedef struct
 // 10 Back Right Height		175 (Furthest Lowered)		475 (Furthest raised)		300
 // 11 Rear right Radius		150 (Furthest out)			375 (Furthest in)			320
 
-
-
 extern const LegMotorConfig leg_bounds[12];
 extern const int motor_sign[4];
+extern vec3 rest_positions[4];
 
 // note:
 // COM is _just_ undenearh support when front legs are furthest back, and back legs are at 200/400 respectively
@@ -71,6 +84,18 @@ enum StrokePhase {
 	Planting
 };
 
+void foot_position_of(enum Leg leg, unsigned motor_pwm[3], vec3 posititon_out);
+
+bool motor_delta_for(
+	enum Leg leg,
+	vec3 position_delta,
+	vec3 current_position,
+	unsigned current_motor_pwm[3],
+	short motor_delta_out[3]
+	);
+
+
+
 unsigned get_servo_index(enum Leg leg, enum MotorPosition position);
 
 typedef float LegAngles[LEG_CONFIGURATION_SIZE];
@@ -92,12 +117,12 @@ struct Darkpaw
     unsigned   motor_positions[LEGS][LEG_MOTORS];
     vec3       centre_of_pressure;		        // in body frame
 };
-void solve_leg_angles(unsigned motor_pwm[3], LegAngles out_angles);
+void solve_leg_angles(enum Leg leg, unsigned motor_pwm[3], LegAngles out_angles);
 struct Darkpaw* new_model(void);
 
 void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array);
 
-bool leg_position_to_angles(enum Leg leg,  vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]);
+bool leg_position_to_angles(enum Leg leg,  vec3 target, LegAngles* out_angles, unsigned *current_servos_setpoints);
 
 
 void get_next_motor_position(
@@ -109,8 +134,32 @@ void get_next_motor_position(
 		unsigned* motor_out[LEGS * LEG_MOTORS]);
 
 
-int angle_to_pwm(float radians);
-float pwm_to_angle(int pwm);
+unsigned angle_to_pwm(unsigned motor, float radians);
+float pwm_to_angle(unsigned motor, unsigned pwm);
+
+void leg_angles_to_pwm(enum Leg leg, LegAngles angles, unsigned *motor_out);
+
+
+void phase_to_position(enum Leg leg, float phase, vec3 out_position);
+
+struct MotorSequence {
+	unsigned current_position;
+	unsigned length;
+	motor_set *values;
+};
+
+struct MotorSequence* allocate_motor_sequence(unsigned int length);
+
+void free_motor_sequence(struct MotorSequence* seq);
+/*
+bool generate_pick_and_place(enum Leg leg,
+	unsigned *current_motor_values,
+	vec3 target_position,
+	float peak_height,
+	float path_duration,
+	float delta_time,
+	struct MotorSequence* out_sequence);
+	*/
 #endif // !MODEL_H
 
 

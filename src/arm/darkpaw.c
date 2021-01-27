@@ -106,7 +106,7 @@ bool atof_failed(float result, char* string) {
     return is_zero && (result != 0.0f);
 }
 
-bool repl_loop() {
+void repl_loop(bool* should_quit) {
     char buffer[80];
     char* cmd;
     char *sep = " ";
@@ -117,18 +117,22 @@ bool repl_loop() {
     // angle leg joint angle
     // pos leg dx dy dz
 
-    while (fgets(buffer, 80, stdin) != NULL) {
+    while ((fgets(buffer, 80, stdin) != NULL) && (*should_quit != true)) {
 
         cmd = strtok(buffer, sep);
         leg = strtok(NULL, sep);
         param_1 = strtok(NULL, sep);
         param_2 = strtok(NULL, sep);
         param_3 = strtok(NULL, sep);
+        if (strcmp(buffer, "quit") == 0) {
+            *should_quit = true;
+            return true;
+        }
+        else if (strcmp(buffer, "walk") == 0){
+            walk(should_quit);
+        }
 
-        if (cmd == NULL) {
-            if (strcmp(buffer, "quit") == 0) {
-                return true;
-            }
+        if (cmd == NULL) {    
             continue;
         }
 
@@ -204,9 +208,51 @@ bool repl_loop() {
                     printf("Could not solve angles for positons\n");
                 };
             }
-        }
+        } 
         else {
             printf("Invalid Command\n");
         }
     }
 }
+
+#define WRAP(a) a >= M_2_PI ? a - M_2_PI : a
+
+void direct_leg_control(bool* should_quit) {
+
+}
+
+void test_pick_and_place(enum Leg leg) {
+    
+    unsigned current_motor_values[3];
+/*
+    vec3 target_position = {},
+        float peak_height,
+        float path_duration,
+        float delta_time,
+        struct MotorSequence* out_sequence) {
+
+    generate_pick_and_place(
+
+    )
+    */
+}
+
+void walk(bool* should_quit) {
+
+    float delta_time = 0.05;
+    float phases[0] = { 0.0f, M_PI, M_PI_2, M_PI + M_PI_2 };
+    unsigned motors[4][3] = { {300,300,300}, {300,300,300}, {300,300,300}, {300,300,300}};
+    LegAngles angles[4];
+    vec3 current_leg_pos[4];
+    struct MotorSequence* sequence[4];
+
+    enum Phases {
+        setting_fl =0,
+        setting_fr,
+        setting_bl,
+        setting_br,
+        walking
+    } walk_phase = 0;
+
+
+}   

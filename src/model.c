@@ -5,6 +5,38 @@
 #define MOTOR_ZERO 300
 #define eps 0.0001f
 
+/*
+const LegMotorConfig leg_bounds[12] = {
+	{125, 425, 300, 425, M_PI_4, (425.0 - 300.0) / M_PI_4},
+	{175, 475, 310, 110, -M_PI_2, 200.0f / M_PI_2 },
+	{100, 375, 280, 480, M_PI_2, 200.0f / M_PI_2},	// 480 -> flat pointin out
+	{125, 425, 275, 390, M_PI_4, 125.0f/M_PI_4  },	// 390 -> 45 deg back
+	{125, 425, 300, 500, M_PI_2, 200.0f / M_PI_2},	// 500 -> arm flat poiting ot
+	{225, 500, 315, 115, -M_PI_2, 200.0f / M_PI_2 },	// 125 -> arm flat pointing out
+	{175, 475, 325, 410, M_PI_4, 125.0f/M_PI_4},	// 410 -> arm point 45 deg back
+	{125, 425, 300, 500, M_PI_2, 200.0f/M_PI_2},	// 500 -> arm pointing straight out
+	{200, 450, 290, 90, -M_PI_2, 200.0f/M_PI_2},	// 90 -> arm poinint straight out
+	{175, 475, 310, 200, -M_PI_4, 125.0f/M_PI_4 },	// 45 deg back
+	{175, 475, 300, 100, -M_PI_2, 200.0f/M_PI_2 },	// straight out
+	{150, 375, 320, 500, M_PI_2, 200.0f/M_PI_2}	// straight out
+};
+*/
+const LegMotorConfig leg_bounds[12] = {
+	{125, 425, 300, 425, M_PI_4, (425.0 - 300.0) / M_PI_4},
+	{175, 475, 300, 100, -M_PI_2, 200.0f / M_PI_2 },
+	{100, 375, 300, 500, M_PI_2, 200.0f / M_PI_2},	// 480 -> flat pointin out
+	{125, 425, 300, 390, M_PI_4, 125.0f / M_PI_4  },	// 390 -> 45 deg back
+	{125, 425, 300, 500, M_PI_2, 200.0f / M_PI_2},	// 500 -> arm flat poiting ot
+	{225, 500, 300, 115, -M_PI_2, 200.0f / M_PI_2 },	// 125 -> arm flat pointing out
+	{175, 475, 300, 410, M_PI_4, 125.0f / M_PI_4},	// 410 -> arm point 45 deg back
+	{125, 425, 300, 500, M_PI_2, 200.0f / M_PI_2},	// 500 -> arm pointing straight out
+	{200, 450, 300, 90, -M_PI_2, 200.0f / M_PI_2},	// 90 -> arm poinint straight out
+	{175, 475, 300, 200, -M_PI_4, 125.0f / M_PI_4 },	// 45 deg back
+	{175, 475, 300, 100, -M_PI_2, 200.0f / M_PI_2 },	// straight out
+	{150, 375, 300, 500, M_PI_2, 200.0f / M_PI_2}	// straight out
+};
+
+
 float abs_f(float x) {
 	return x > 0 ? x : -x;
 }
@@ -12,33 +44,26 @@ float sign_f(float x) {
 	return x < 0 ? -1.0f : 1.0f;
 }
 
-int angle_to_pwm(float radians) {
-	int pwm = MOTOR_ZERO + round(MOTOR_ZERO * radians / M_PI_2);
+unsigned angle_to_pwm(unsigned motor, float radians) {
+	const LegMotorConfig *motor_config = &leg_bounds[motor];
+	
+	if (radians < -M_PI) { radians += M_2_PI; }
+	else if (radians > M_PI) { radians -= M_2_PI; }
+
+	unsigned pwm = motor_config->rest + (unsigned)round(motor_config->gradient * radians);
+	
 	return pwm;
 }
 
-float pwm_to_angle(int pwm) {
-	return  (((float)pwm) / MOTOR_ZERO - 1.0f) * M_PI_2;
+float pwm_to_angle(unsigned motor, unsigned pwm) {
+	float out = ((float)pwm - (float)leg_bounds[motor].rest) / leg_bounds[motor].gradient;
+
+	return  out;
 }
 
 unsigned get_servo_index(enum Leg leg, enum MotorPosition position) {
 	return ( 3 * (unsigned)leg) + ((unsigned) position);
 }
-
-const LegMotorConfig leg_bounds[12] = {
-	{125, 425, 300, 425, M_PI_4},
-	{175, 475, 310, 110, -M_PI_2},
-	{100, 375, 280, 0, 0.0f},
-	{125, 425, 275, 0, 0.0f},
-	{125, 425, 305, 0, 0.0f},
-	{225, 500, 315, 0, 0.0f},
-	{175, 475, 325, 0, 0.0f},
-	{125, 425, 300, 0, 0.0f},
-	{200, 450, 290, 0, 0.0f},
-	{175, 475, 310, 0, 0.0f},
-	{175, 475, 300, 0, 0.0f},
-	{150, 375, 320, 0, 0.0f}
-};
 
 const int motor_sign[4] = {
 	1,
@@ -115,10 +140,10 @@ void angles_to_leg_position(enum Leg leg, LegAngles angles, vec3 out_array) {
 };
 
 
-void solve_leg_angles(unsigned motor_pwm[3], LegAngles out_angles) {
-	float u_b = pwm_to_angle(motor_pwm[Angle]);
-	float u_h = pwm_to_angle(motor_pwm[Height]);
-	float u_r = pwm_to_angle(motor_pwm[Radius]);
+void solve_leg_angles(enum Leg leg, unsigned motor_pwm[3], LegAngles out_angles) {
+	float u_b = pwm_to_angle(leg, motor_pwm[Angle]);
+	float u_h = pwm_to_angle(leg, motor_pwm[Height]);
+	float u_r = pwm_to_angle(leg, motor_pwm[Radius]);
 
 	float bodyangle_cos_coeff = -400.0 * sinf(u_b) - 900.0 * cosf(u_b) - 1344.0;
 	float bodyangle_sin_coeff = -900.0 * sinf(u_b) + 400.0 * cosf(u_b) - 3024.0;
@@ -151,7 +176,7 @@ void update_state_from_motors(struct Darkpaw* darkpaw) {
 	glm_vec3_zero(running_sum);
 	
 	for (int i = 0; i < LEGS; i++) {
-		solve_leg_angles(darkpaw->motor_positions[i], darkpaw->angles[i]);
+		solve_leg_angles(i, darkpaw->motor_positions[i], darkpaw->angles[i]);
 		angles_to_leg_position(i, darkpaw->angles[i], darkpaw->foot_positons[i]);
 		if (darkpaw->is_planted[i]) {
 			glm_vec3_add(darkpaw->foot_positons[i], running_sum, running_sum);
@@ -208,14 +233,14 @@ void get_next_motor_position(
 // void reset_phase()
 // void stroke_phase()
 // void place_phase()
-
+/*
 typedef struct SearchElement {
 	float distance;
 	int motor_values[LEG_MOTORS];
 } SearchElement;
 
 // #define LEG_MOTORS_CUBED LEG_MOTORS * LEG_MOTORS * LEG_MOTORS
-
+*/
 
 enum Directions {NO_DIR = -1, UP = 0, DOWN, LEFT, RIGHT, FORWARDS, BACK, TOTAL_DIR};
 enum Directions inverse_direction[TOTAL_DIR] = {DOWN, UP, RIGHT, LEFT, BACK, FORWARDS};
@@ -226,7 +251,7 @@ void add_u3(unsigned a[3], int b[3], unsigned out[3]) {
 	}
 }
 
-bool are_motors_valid(unsigned values[LEG_MOTORS]) {
+bool are_motors_valid(motor_set values) {
 	for (int i = 0; i < LEG_MOTORS; i++) {
 		if ((values[i] > 450) || (values[i] < 150)) {
 			return false;
@@ -235,7 +260,7 @@ bool are_motors_valid(unsigned values[LEG_MOTORS]) {
 	return true;
 }
 
-bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, unsigned current_servos_setpoints[LEG_MOTORS]) {
+bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, unsigned *current_servos_setpoints) {
 
 	unsigned best_motor_values[LEG_MOTORS] = { MOTOR_ZERO, MOTOR_ZERO, MOTOR_ZERO };
 	int motor_steps[TOTAL_DIR][LEG_MOTORS] = {
@@ -259,7 +284,7 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 		add_u3(current_servos_setpoints, zero, best_motor_values);
 	}
 	
-	solve_leg_angles(best_motor_values, test_angles);
+	solve_leg_angles(leg, best_motor_values, test_angles);
 	
 	angles_to_leg_position(leg, test_angles, test_pos);
 	glm_vec3_sub(test_pos, target, difference);
@@ -273,7 +298,7 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 					at_boundary = true;
 					continue;
 				}
-				solve_leg_angles(test_motor_values, test_angles);
+				solve_leg_angles(leg, test_motor_values, test_angles);
 				angles_to_leg_position(leg, test_angles, test_pos);
 				glm_vec3_sub(test_pos, target, difference);
 				test_distance = glm_vec3_norm(difference);
@@ -295,19 +320,123 @@ bool leg_position_to_angles(enum Leg leg, vec3 target, LegAngles* out_angles, un
 		steps_left--;
 	}
 
-	solve_leg_angles(best_motor_values, *out_angles);
+	solve_leg_angles(leg, best_motor_values, *out_angles);
 	
 	return (!at_boundary);
 }
 
 
-
-
-#define MAX_EXTENSION
-#define MIN_EXTENSION 
+vec3 rest_positions[4] = {
+	{65.603020f, 45.364006f,-2.931194f},
+	{-65.603020f, 45.364006f, -2.931194f},
+	{65.603020f, -45.364006f,-2.931194f},
+	{-65.603020f, -45.364006f, -2.931194f} 
+};
 
 
 void phase_to_position(enum Leg leg, float phase, vec3 out_position) {
 
+	if (phase < M_PI) {
+		out_position[0] = rest_positions[leg][0] + 4.0f * (phase / M_PI - 0.5f);
+		out_position[1] = rest_positions[leg][1];
+		out_position[2] = rest_positions[leg][2];
+	}
+	else {
+		out_position[0] = rest_positions[leg][0] - 4.0f * (phase / M_PI - 1.5f);
+		out_position[1] = rest_positions[leg][1];
+		out_position[2] = rest_positions[leg][2] - 2.0f * sinf(phase);
+	}
+}
+
+void leg_angles_to_pwm(enum Leg leg, LegAngles angles, unsigned *motor_out) {
+	motor_out[Angle] = angle_to_pwm(get_servo_index(leg, Angle), angles[TorsoLeg]);
+	motor_out[Height] = angle_to_pwm(get_servo_index(leg, Height), angles[LegTriangle]);
+	motor_out[Radius] = angle_to_pwm(get_servo_index(leg, Radius), angles[LegY]);
+};
+
+
+
+
+struct MotorSequence* allocate_motor_sequence(unsigned int length) {
+
+	// unsigned* memory = malloc((2 + 3 * length) * sizeof(unsigned));
+
+	// struct MotorSequence* out = (struct MotorSequence*)memory;
+	struct MotorSequence* out = malloc(sizeof(struct MotorSequence));
+	out->current_position = 0;
+	out->length = length;
+	out->values = malloc(length * sizeof(motor_set));
+	return out;
+}
+
+void free_motor_sequence(struct MotorSequence* seq) {
+	if (seq) {
+		if (seq->values) {
+			free(seq->values);
+		}
+		free(seq);
+	}
+}
+/*
+void print_vec3(vec3 vector) {
+	printf("(%f, %f, %f)\n", vector[0], vector[1], vector[2]);
+}*/
+
+bool
+generate_pick_and_place(enum Leg leg,
+	motor_set current_motor_values,
+	vec3 target_position,
+	float peak_height,
+	float path_duration,
+	float delta_time,
+	struct MotorSequence* out_sequence) {
+
+	unsigned int steps = (unsigned)roundf(path_duration / delta_time);
+	vec3 position;
+	vec3 current_position;
+	float proportion;
+	float height = 0;
+	LegAngles angles;
+	unsigned *temp_motor;
+
+	solve_leg_angles(leg, current_motor_values, angles);
+	angles_to_leg_position(leg, angles, current_position);
+
+	out_sequence = allocate_motor_sequence(steps);
+	
+	for (int i = 0; i < 3; i++) { 
+		out_sequence->values[0][i] = current_motor_values[i]; 
+	}
+	printf("%u %u %u\n", out_sequence->values[0][0], out_sequence->values[0][1], out_sequence->values[0][2]);
+	temp_motor = &(out_sequence->values[0][0]);
+	for (int i = 1; i < steps; i++) {
+		proportion = (float)i / (steps - 1);
+		glm_vec3_lerp(current_position, target_position, proportion, position);
+		height = peak_height * sinf(M_PI * proportion);
+		position[2] += height;
+		
+		printf("Motors: (%u %u %u)",
+			temp_motor[0],
+			temp_motor[1],
+			temp_motor[2]);
+		if (leg_position_to_angles(leg, position, &angles, temp_motor) == true) {
+			temp_motor = &(out_sequence->values[i][0]);
+			leg_angles_to_pwm(leg, angles, temp_motor);
+			printf("-> (%u %u %u) \n",
+				temp_motor[0],
+				temp_motor[1],
+				temp_motor[2]);
+			printf("Leg angles: (%f, %f, %f, %f,%f, %f)\n",
+				angles[0], angles[1], angles[2], angles[3], angles[4], angles[5]);
+		}
+		else {
+			free_motor_sequence(out_sequence);
+			out_sequence = NULL;
+			return false;
+		}
+
+	}
+	
+	return true;
 
 }
