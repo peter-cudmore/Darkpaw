@@ -1,37 +1,5 @@
 import sympy as sp
 import numpy as np
-import cvxpy as cp
-
-
-def angles_to_quadratics(
-        equations,
-        angles,
-        control_angles
-):
-
-    x = {theta: sp.symbols(f's_{i}, c_{i}') for i, theta in enumerate(angles)}
-    u = {theta: sp.symbols(f'v_{i}, w_{i}') for i, theta in enumerate(control_angles)}
-    substitutions = []
-
-    X = [q_i for q in x.values() for q_i in q] + [q_i for q in u.values() for q_i in q]
-
-    for i, x_i in enumerate(x):
-        (s_i, c_i) = x[x_i]
-        substitutions += [(sp.sin(x_i), s_i), (sp.cos(x_i), c_i)]
-
-    for i, u_i in enumerate(u):
-        (s_i, c_i) = u[u_i]
-        substitutions += [(sp.sin(u_i), s_i), (sp.cos(u_i), c_i)]
-
-    out_equations = [
-        sp.expand_trig(equation).subs(substitutions)
-        for equation in equations
-    ]
-
-    out_equations += [q_i[0] ** 2 + q_i[1] ** 2 - 1 for q_i in x.values()]
-    out_equations += [q_i[0] ** 2 + q_i[1] ** 2 - 1 for q_i in u.values()]
-
-    return X, out_equations, substitutions, (x, u)
 
 
 def angles_to_complex(
@@ -62,25 +30,6 @@ def angles_to_complex(
     return X, out_equations, substitutions, (x, u)
 
 
-def quadratic_form(eqn, X, X0):
-    subs = list(zip(X, X0))
-    P = sp.Matrix([[eqn.diff(t).diff(s) for t in X] for s in X]).subs(subs)/2
-    q = sp.Matrix([eqn.diff(t) for t in X]).T.subs(subs)
-    r = eqn.subs(subs)
-
-    XM = sp.Matrix(X)
-    rem = (XM.T @ P @ XM)[0] + (q @ XM)[0] + r - eqn
-    ev = [sp.re(e) for e in P.eigenvals()]
-
-    if min(ev) < 0:
-        P -= min(ev)*sp.eye(len(X))
-        r += min(ev) * len(X)
-        #P, r_added = make_positive(np.asarray(P))
-        #r += r_added
-
-    return np.asarray(P).astype(np.float), np.asarray(q).astype(np.float), float(r), rem
-
-
 def remove_nonzero_factors(eqn):
     if eqn == 0:
         return eqn
@@ -95,29 +44,6 @@ def remove_nonzero_factors(eqn):
 
     return result
 
-
-def make_positive(matrix):
-
-    n, _ = matrix.shape
-    X = cp.Variable(n)
-    A = np.zeros(shape=(n//2, n), dtype=np.float)
-
-    for i in range(n//2):
-        A[i, 2*i] = 1
-        A[i, 2 * i + 1] = -1
-
-    constraints = [A @ X]
-    constraints.append(cp.lambda_min(matrix + cp.diag(X)) >= 0)
-
-    objective = cp.norm(X, 1)
-
-    problem = cp.Problem(cp.Minimize(objective), constraints)
-
-    problem.solve(verbose=True)
-
-    out_matrix = matrix + np.diag(X.value)
-
-    return out_matrix, - sum(X.value) / 2
 
 def RotateXY(angle):
     c = sp.cos(angle)
@@ -150,19 +76,6 @@ def Translate(x, y, z):
     for i, v in enumerate((x, y, z)):
         out[i, 3] = v
     return out
-
-def R(th):
-    c = sp.cos(th)
-    s = sp.sin(th)
-    return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
-
-def S(s):
-    return np.array([[s, 0, 0], [0, s, 0], [0, 0, 1]])
-
-def T(x, y, th=0):
-    c = sp.cos(th)
-    s = sp.sin(th)
-    return np.array([[c, -s, x], [s, c, y], [0, 0, 1]])
 
 
 def to_line(point, origin):
@@ -298,3 +211,43 @@ def filter_tiny_numbers(eqn, eps=1e-4):
         except TypeError:
             continue
     return eqn.subs(subs)
+
+
+def eqn_to_mul_add(eqn):
+
+    atoms = {s: 0 for s in eqn.atoms() if s.is_symbol}
+    if not atoms:
+        return eqn
+
+    coeff, factors = sp.factor_list(eqn)
+
+    if len(factors) > 1:
+        for factor, power in factors:
+            coeff *= eqn_to_mul_add(factor)
+        return coeff
+    elif not factors:
+        return coeff
+
+    this_factor, power = factors[0]
+    _, terms = this_factor.as_coeff_add()
+
+    for term in terms:
+        for atom in term.atoms():
+            if atom in atoms:
+                atoms[atom] += 1
+
+    root, _ = max(atoms.items(), key=lambda x: x[1])
+
+    b = this_factor.coeff(root, 0)
+    a = 0
+
+    for i in range(10):
+        a += this_factor.coeff(root, i + 1) * (root ** i)
+
+    a = eqn_to_mul_add(a)
+    b = eqn_to_mul_add(b)
+
+    result = coeff
+    for i in range(power):
+        result *= (a*root + b)
+    return result

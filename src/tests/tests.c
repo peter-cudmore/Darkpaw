@@ -3,6 +3,7 @@
 //
 
 #include "minunit.h"
+#include <stdio.h>
 int tests_run = 0;
 
 
@@ -17,7 +18,5 @@ int main(int argc, char **argv) {
     if (result != 0) {
         printf("%s\n", result);
     }
-    else {
-
     return result != 0;
 }

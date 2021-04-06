@@ -1,11 +1,12 @@
 ARCH = $(shell uname -m)
 CC=cc
-CFLAGS=-Ideps -Ideps/cglm/include
+CFLAGS=-Ideps -Ideps/cglm/include -Isrc
 
 DIRS = src/ src/tests/
-OBJS = model.o darkpaw.o
+OBJS = model.o darkpaw.o linalg.o
 TEST_OBJS = tests.o
 MAIN_OBJS = main.o
+PI_ADDRESS = 192.168.1.16
 
 LFLAGS = -lm
 ifneq ($(filter arm%,$(ARCH) ),)
@@ -25,6 +26,8 @@ MAIN = $(patsubst %.o, $(ODIR)/%.o, $(MAIN_OBJS))
 TEST = $(patsubst %.o, $(ODIR)/%.o, $(TEST_OBJS))
 ALL = $(OBJ) $(MAIN) $(TEST)
 
+all: main test
+
 main: $(OBJ) $(MAIN)
 	$(CC) -o $@ $^ $(LFLAGS)
 
@@ -35,14 +38,14 @@ test: $(OBJ) $(TEST)
 	$(CC) -o $@ $^ $(LFLAGS)
 	./test
 
-kine_test:
-	$(CC) src/kinematics.c src/tests/kine_tests.c -o kine_test $(CFLAGS) $(LFLAGS) -Isrc  -DDEBUG
-	./kine_test
-
-.PHONY: clean test kine_test
+.PHONY: clean test deploy
 
 $(ODIR):
 	mdkir $(ODIR)
+
+
+deploy:
+	rsync -ru --exclude-from='rsync_excludes.txt' . pi@$(PI_ADDRESS):~/Darkpaw
 
 clean:
 	-rm -f main

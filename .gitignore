@@ -56,7 +56,7 @@ dkms.conf
 
 # Workspace Temp files
 .vs/
-
+.idea/
 # Python
 */venv/*
 */.idea/*

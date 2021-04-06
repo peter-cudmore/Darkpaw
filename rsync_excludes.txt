@@ -1,0 +1,10 @@
+.git
+.gitignore
+.gitmodules
+.vs
+obj
+main
+scripts/venv
+scripts/__pycache__
+scripts/.idea
+scripts/.ipynb_checkpoints
