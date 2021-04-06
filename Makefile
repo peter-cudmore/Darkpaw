@@ -1,12 +1,14 @@
 ARCH = $(shell uname -m)
+PI_ADDRESS = 192.168.1.16
+
 CC=cc
 CFLAGS=-Ideps -Ideps/cglm/include -Isrc
 
 DIRS = src/ src/tests/
-OBJS = model.o darkpaw.o linalg.o
+OBJS = model.o darkpaw.o linalg.o walk_phase.o
 TEST_OBJS = tests.o
 MAIN_OBJS = main.o
-PI_ADDRESS = 192.168.1.16
+
 
 LFLAGS = -lm
 ifneq ($(filter arm%,$(ARCH) ),)

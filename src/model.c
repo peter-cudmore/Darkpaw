@@ -955,7 +955,7 @@ int lookup_by_value(AngleLookupTable* table, float value){
     return mid;
 }
 
-bool pwm_to_angles(u8* pwm_values, float* angles){
+bool pwm_to_angles(u16* pwm_values, float* angles){
 
     int index;
 
@@ -967,7 +967,7 @@ bool pwm_to_angles(u8* pwm_values, float* angles){
     return true;
 }
 
-bool pwm_to_grads(u8* pwm_values, float* grads){
+bool pwm_to_grads(u16* pwm_values, float* grads){
     int index;
 
     for (int i=0; i<3; i++){
@@ -978,7 +978,7 @@ bool pwm_to_grads(u8* pwm_values, float* grads){
     return true;
 }
 
-bool values_to_pwm(float* angles, u8* pwm_values){
+bool values_to_pwm(float* angles, u16* pwm_values){
     int index;
 
     for (int i=0; i<3; i++){
@@ -991,21 +991,17 @@ bool values_to_pwm(float* angles, u8* pwm_values){
 }
 
 
-bool forward_leg_kinematics(u8* pwm_values, float* position){
+bool forward_leg_kinematics(u16* pwm_values, float* position){
     float angles[3];
     if (!pwm_to_angles(pwm_values, angles))
         return false;
 
     get_leg_position(angles, position);
+    return true;
 }
 
 
-
-#define vec3_isubs(x, y) x[0]-=y[0]; x[1]-=y[1]; x[2]-=y[2]
-#define vec3_norm_sqr(x) x[0]*x[0] + x[1]*x[1] + x[2]*x[2]
-#define vec3_iadd(x, y) x[0]+=y[0]; x[1]+=y[1]; x[2]+=y[2]
-
-bool inverse_leg_kinematics(float* x_desired, u8* pwm_values, float tol, int max_steps){
+bool inverse_leg_kinematics(float* x_desired, u16* pwm_values, float tol, int max_steps){
 
     float eps = 0.001;
     float error[3];
@@ -1016,7 +1012,6 @@ bool inverse_leg_kinematics(float* x_desired, u8* pwm_values, float tol, int max
 
     int P[4];
     float grads[3];
-    short delta_pwm[3];
 
     for (int step=0;step < max_steps; step++){
 

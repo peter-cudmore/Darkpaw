@@ -115,6 +115,13 @@ static int init_PCA9685(void) {
     return set_pwm_freq(50.0);
 };
 
+int set_pwms(u16* values){
+    for (int i =0; i < CHANNEL_MAX; i++){
+        if (set_pwm(i, 0, values[i]) < 0)   return -1;
+    }
+    return 0;
+}
+
 void reset_stance(void) {
 	for (unsigned i = 0; i < 12; i++) {
 		set_pwm(i, 0, 300);
@@ -134,7 +141,7 @@ int init_servos(void) {
         fprintf(stderr, "Failed to initialise PCA9685\n");
         close_servos();
         return -1;
-    };
+    }
 
     reset_stance();
 

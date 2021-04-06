@@ -48,6 +48,11 @@ int main(int arvc, char* argv[]) {
     signal(SIGINT, on_quit);
     signal(SIGQUIT, on_quit);
 
+    while (!should_quit){
+        tick(DT);
+        nsleep(DT_MS);
+    }
+
     shutdown();
     return 0;
 } 

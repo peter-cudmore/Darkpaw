@@ -5,6 +5,12 @@
 #ifndef DARKPAW_LINALG_H
 #define DARKPAW_LINALG_H
 
+#define vec3_isubs(x, y) x[0]-=y[0]; x[1]-=y[1]; x[2]-=y[2]
+#define vec3_norm_sqr(x) x[0]*x[0] + x[1]*x[1] + x[2]*x[2]
+#define vec3_iadd(x, y) x[0]+=y[0]; x[1]+=y[1]; x[2]+=y[2]
+
+
+
 /* INPUT: A - array of pointers to rows of a square matrix having dimension N
  *        Tol - small tolerance number to detect failure when the matrix is near degenerate
  * OUTPUT: Matrix A is changed, it contains a copy of both matrices L-E and U as A=(L-E)+U such that P*A=L*U.

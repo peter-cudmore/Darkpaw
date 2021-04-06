@@ -1,9 +1,13 @@
 #ifndef MODEL_H
 #define MODEL_H
+
 #include <stdbool.h>
+#include "types.h"
+
+#define MOTOR_ZERO 300
 
 typedef struct {
-    int pwm;
+    u16 pwm;
     float value;
     float grad;
 } AngleLookupTableItem;
@@ -22,5 +26,6 @@ float get_jacobian_determinant(float* angles);
 int lookup_by_pwm(AngleLookupTable* table, int pwm);
 int lookup_by_value(AngleLookupTable* table, float value);
 
-
+bool forward_leg_kinematics(u16* pwm_values, float* position);
+bool inverse_leg_kinematics(float* x_desired, u16* pwm_values, float tol, int max_steps);
 #endif
