@@ -3,7 +3,7 @@
 #include <math.h>
 #include "servos.h"
 #include "pigpio/pigpio.h"
-#include "../model.h"
+
 
 #define PCA9685_ADDRESS 0x40
 #define MODE1           0x00
@@ -38,11 +38,11 @@
 static int driver_fp = -1;
 
 
-int set_all_pwm(unsigned on, unsigned off) {
-    return (i2cWriteByteData(driver_fp, ALL_LED_ON_L, on & 0xFF)
-            | i2cWriteByteData(driver_fp, ALL_LED_ON_H, on >> 8) 
-            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off & 0xFF)
-            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, off >> 0)
+int set_all_pwm(u16 on, u16 off) {
+    return (i2cWriteByteData(driver_fp, ALL_LED_ON_L, (u8) on & 0xFF)
+            | i2cWriteByteData(driver_fp, ALL_LED_ON_H,  (u8) on >> 8)
+            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, (u8) off & 0xFF)
+            | i2cWriteByteData(driver_fp, ALL_LED_OFF_L, (u8) off >> 0)
 	   );   
 }
 
@@ -71,15 +71,15 @@ int set_pwm_freq(float freq_hz) {
     return i2cWriteByteData(driver_fp, MODE1, oldmode | RESTART);
 }
 
-int set_pwm(unsigned channel, unsigned on, unsigned off) {
+int set_pwm(unsigned channel, u16 on, u16 off) {
     if ((off < SERVO_MIN) || (off > SERVO_MAX) || (channel >= CHANNEL_MAX))
         return INVALID_SERVO_COMMAND;
 
     return (
-        i2cWriteByteData(driver_fp, LED0_ON_L + 4 * channel, on & 0xFF)
-        | i2cWriteByteData(driver_fp, LED0_ON_H + 4 * channel, on >> 8)
-        | i2cWriteByteData(driver_fp, LED0_OFF_L + 4 * channel, off & 0xFF)
-        | i2cWriteByteData(driver_fp, LED0_OFF_H + 4 * channel, off >> 8)
+        i2cWriteByteData(driver_fp, LED0_ON_L + 4 * channel, (u8) (on & 0xFF))
+        | i2cWriteByteData(driver_fp, LED0_ON_H + 4 * channel, (u8) (on >> 8))
+        | i2cWriteByteData(driver_fp, LED0_OFF_L + 4 * channel, (u8) (off & 0xFF))
+        | i2cWriteByteData(driver_fp, LED0_OFF_H + 4 * channel, (u8) (off >> 8))
         );
 }
 
@@ -121,9 +121,6 @@ void reset_stance(void) {
     }
 };
 
-bool set_motor_angle(unsigned motor, float radians){	
-	return set_pwm(motor, 0, angle_to_pwm(motor, radians)) == 0;
-}
 
 int init_servos(void) {
     

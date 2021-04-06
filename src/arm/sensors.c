@@ -69,7 +69,8 @@ int init_sensors(void) {
         fprintf(stderr, "Failed to get i2c device: MPU6050\n");
         return -1;
     }
-	return 0;
+
+	return init_mpu6050();
 };
 
 void close_sensors(void) {

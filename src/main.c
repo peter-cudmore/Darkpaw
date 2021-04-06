@@ -47,20 +47,6 @@ int main(int arvc, char* argv[]) {
 
     signal(SIGINT, on_quit);
     signal(SIGQUIT, on_quit);
-    /*
-    while (!should_quit) {
-        step_test(DT);
-        nsleep(DT_MS);
-    }
-    */ 
-    repl_loop(&should_quit);
-    // each tick
-    // read sensors
-    // read command
-    // estimate position and world
-    // update footstep planner
-    // generate motor positions
-    // continue
 
     shutdown();
     return 0;
