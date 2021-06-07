@@ -30,15 +30,30 @@ def angles_to_complex(
     return X, out_equations, substitutions, (x, u)
 
 
-def remove_nonzero_factors(eqn):
+def remove_nonzero_factors(eqn,
+                           reduce_monomials=False,
+                           atom_bounds=None
+                           ):
     if eqn == 0:
         return eqn
     result = 1
-    for factor in sp.factor(eqn).args:
-        if factor.is_number:
-            continue
+    domains = {}
+    for atom in [a for a in eqn.atoms() if a.is_symbol]:
+        if atom_bounds and atom in atom_bounds:
+            domains[atom] = sp.Interval(*atom_bounds[atom])
+        else:
+            domains[atom] = sp.Reals
+
+    for factor in sp.factor(sp.cancel(eqn)).args:
         if isinstance(factor, sp.Pow) and factor.args[1] < 0:
             continue
+        if reduce_monomials:
+            atoms = [a for a in factor.atoms() if a.is_symbol]
+            if len(atoms) == 1:
+                a, = atoms
+                solve_set = sp.solveset(factor, domain=domains[a])
+                if not solve_set:
+                    continue
 
         result *= factor
 
@@ -48,7 +63,7 @@ def remove_nonzero_factors(eqn):
 def RotateXY(angle):
     c = sp.cos(angle)
     s = sp.sin(angle)
-    return np.array([[c, -s, -s, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    return np.array([[c, -s, 0, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
 
 
 def RotateXZ(angle):
@@ -107,35 +122,37 @@ def tan_simplify(eqn, atom, implicit=True, positive_branch=False):
     c = sp.Dummy('c')
 
     eq_temp = eqn.subs([(sp.sin(atom), s), (sp.cos(atom), c)]).collect(c).collect(s)
-
-    A = eq_temp.coeff(c, 1).coeff(s, 0)
-    B = eq_temp.coeff(s, 1).coeff(c, 0)
+    # A sin + B cos + C = 0
+    # R = sign(A)/(A^2 +B^2)^{1/2}
+    # A / R sin(x) + B/R cos(x)  + C/R = 0
+    # sin(x + phi) + C / R= 0
+    # B / R = sin(phi)
+    # A / R  = cos(phi)
+    # tan = sin/cos = (B/A)
+    # phi = arctan(B / A)
+    # sin(x + phi)  + C / R = 0
+    A = eq_temp.coeff(s, 1).coeff(c, 0)
+    B = eq_temp.coeff(c, 1).coeff(s, 0)
     remainder = eq_temp.coeff(c, 0).coeff(s, 0)
 
-    difference = sp.expand(A*c + B*s + remainder - eq_temp)
+    difference = sp.expand(A*s + B*c + remainder - eq_temp)
 
     if difference != 0 or not A or not B:
         return eqn
-    A = _simplify_all(A)
-    B = _simplify_all(B)
-    remainder = _simplify_all(remainder)
-    ratio = sp.simplify(B / A)
+    #A = _simplify_all(A)
+    #B = _simplify_all(B)
+    magnitude = sp.simplify(A ** 2 + B ** 2)
+    R = sp.sign(A) * sp.sqrt(magnitude)
+    C = remainder / R
 
-    magnitude = _simplify_all(sp.simplify(A**2 + B**2))
-    phase_shift = sp.atan(ratio)
-    if positive_branch:
-        C = sp.simplify(sp.sqrt(magnitude))
-    else:
-        C = sp.simplify(sp.sign(A) * sp.sqrt(magnitude))
-    # C = sp.simplify(sp.sqrt(magnitude))
-    # A sin(theta) + B cos(theta)  + R = C cos(theta - delta) + R = 0
-    # so cos(theta + delta) =  - R / C
-    # theta - delta = arccos(-R/C)
-    # theta = arctan(B/A) + arccos(-R/C)
+    ratio = sp.atan2(B / R, A / R)
+
+    phi = sp.atan(ratio)
+
     if implicit:
-        return sp.simplify(C * sp.cos(atom - phase_shift) + remainder)
+        return sp.simplify(R * sp.sin(atom + phi) + remainder)
     else:
-        return sp.atan(ratio) + sp.acos(sp.simplify(-remainder / C))
+        return -ratio - sp.asin(sp.simplify(C))
 
 
 def Maclaurin_series(expr, atom, order=4):
@@ -152,6 +169,31 @@ def Taylor_series(expr, x, x0, order=4):
         output += sp.re((f.subs(x, x0 / sp.factorial(i)))) * (x - x0)**i
 
     return output
+
+
+def hyperbolic_substitution(expr, angle, x):
+    subs = [(sp.sin(angle), 2 * x / (1 + x**2)),  (sp.cos(angle), (1 - x**2)/(1 + x**2)) ]
+    # sin/cos = tan = 2 x / (1 - x*2)
+    # x_i = tan (angle / 2)
+    return expr.subs(subs)
+
+
+def real_to_integer_polynomial(poly):
+    numbers = [n for n in sp.expand(poly).atoms() if n.is_number]
+
+    factor = 1
+
+    for n in numbers:
+        remainder = abs(factor * n) - int(abs(factor * n))
+        if remainder > 1e-3:
+            factor *= int(1 / remainder)
+
+    result = sum(
+        basis * int(coeff * factor)
+        for basis, coeff in poly.as_coefficients_dict().items()
+    )
+
+    return result
 
 
 def truncate(eqn, order=4):

@@ -3,14 +3,12 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
-#include "model.h"
 
 #include "darkpaw.h"
 #define SIGQUIT 3
 
 bool should_quit = false;
-#define DT_MS 10L // 0.1s
-#define DT 0.01f
+#define DT_MS 10L // 0.01s
 
 void on_quit(int sig)
 {
@@ -35,24 +33,35 @@ int nsleep(long miliseconds)
 
     return nanosleep(&req, &rem);
 }
+
+
 int main(int arvc, char* argv[]) {
 
     int exit_code = 0;
+    struct DarkpawState state;
     // startup routine
-    if ((exit_code = initialise()) != 0) {
-	    printf("Failed to start\n");
-	    shutdown();
-        return exit_code;
+    if ((exit_code = initialise(&state)) != 0) {
+	    printf("Failed to start!\n");
+        goto shutdown;
     }
 
     signal(SIGINT, on_quit);
     signal(SIGQUIT, on_quit);
-
+    float dt = DT_MS / 1000.0f;
     while (!should_quit){
-        tick(DT);
+        // read from sensors
+
+        read_sensors(&state, dt);
+        // compute next action
+
+        compute_next_action(&state, dt);
+
+        update_actuators(&state, dt);
+
         nsleep(DT_MS);
     }
 
+shutdown:
     shutdown();
     return 0;
 } 

@@ -1,10 +1,13 @@
-#include "model.h"
-
 #ifndef DARKPAW_H
+#include "types.h"
 
-int initialise(void);
+
+int initialise(struct DarkpawState* state);
 void shutdown(void);
-void tick(float detla_time);
+
+void read_sensors(struct DarkpawState*, float delta_time);
+void compute_next_action(struct DarkpawState*, float delta_time);
+void update_actuators(struct DarkpawState*, float delta_time);
 
 
 #define DARKPAW_H

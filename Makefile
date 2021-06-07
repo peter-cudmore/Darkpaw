@@ -2,10 +2,10 @@ ARCH = $(shell uname -m)
 PI_ADDRESS = 192.168.1.16
 
 CC=cc
-CFLAGS=-Ideps -Ideps/cglm/include -Isrc
+CFLAGS=-Ideps -Ideps/cglm/include -Isrc -g
 
 DIRS = src/ src/tests/
-OBJS = model.o darkpaw.o linalg.o walk_phase.o
+OBJS = darkpaw.o kinematics.o
 TEST_OBJS = tests.o
 MAIN_OBJS = main.o
 
@@ -38,7 +38,6 @@ $(ALL): $(ODIR)/%.o: %.c
 
 test: $(OBJ) $(TEST) 
 	$(CC) -o $@ $^ $(LFLAGS)
-	./test
 
 .PHONY: clean test deploy
 

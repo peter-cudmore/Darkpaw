@@ -31,7 +31,7 @@ class LookupTable:
         lines = []
         for table_name, contents in self.tables.items():
             entries = [
-                "     {" + ", ".join(str(v_i) for v_i in v) + "}"
+                "     {" + ", ".join(f"{str(v_i)}" for v_i in v) + "}"
                 for v in sorted(contents, key=lambda x: x[0])
             ]
             lines += [
@@ -73,7 +73,6 @@ class Function:
         return self._signature() + ";"
 
 
-
 if __name__ == "__main__":
     test_table = LookupTable(
         'Test',
@@ -81,5 +80,5 @@ if __name__ == "__main__":
         value=float
     )
 
-    test_table.add_entry(1, 2)
-    test_table.add_entry(3, 4)
+    test_table.add_entry('One', 1, 2)
+    test_table.add_entry('One', 3, 4)

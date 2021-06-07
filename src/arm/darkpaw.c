@@ -1,12 +1,10 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "darkpaw.h"
+#include "../darkpaw.h"
 #include "servos.h"
 #include "led.h"
-#include "../model.h"
 #include "pigpio/pigpio.h"
-#include "../walk_phase.h"
 #include <cglm/cglm.h>
 
 u16 motor_values[12] = {
@@ -20,7 +18,7 @@ WalkStatus legs[4];
 vec3 x[4];
 float t;
 
-int initialise(){
+int initialise(struct DarkpawState* state){
     if (!gpioInitialise()) {
         return  -1;
     }
@@ -42,18 +40,18 @@ int initialise(){
         return -1;
     }
     t = 0;
+    vec3 x_new;
+    glm_vec3_copy(x[0], x_new);
+    x_new[0] += 40;
+
     return 0;
 }
 
-float next_update = 0.0f;
-
-void tick(float delta_time){
-
-    t += delta_time;
-    // run a pick up and move the leg phase
 
 
-}
+void read_sensors(struct DarkpawState* state, float delta_time){}
+void compute_next_action(struct DarkpawState* state, float delta_time){}
+void update_actuators(struct DarkpawState* state, float delta_time){}
 
 
 void shutdown(){

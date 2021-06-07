@@ -1,5 +1,6 @@
 import numpy as np
-import scipy as sp
+import sympy as sp
+import scipy.optimize as spo
 import model
 import pyglet
 from pyglet.gl import *
@@ -96,12 +97,40 @@ class Leg:
         self.vertex_list = self.batch.add_indexed(12, pyglet.graphics.GL_LINES, None, self.lines, 'v3f', 'c4B')
         for idx in range(len(self.vertex_list.colors)):
             self.vertex_list.colors[idx] = 255
+        self.generate_functions()
+
+    def generate_functions(self):
+        z, e, maps = model.create_leg_complex_problem()
+        temp = e[4]
+        e[4] = e[5]
+        e[5] = temp
+        f_1 = sp.lambdify((z[0], z[3]), abs(e[3]) ** 2, 'numpy')
+        f_2 = sp.lambdify((z[1], z[4]), abs(e[4]) ** 2, 'numpy')
+        f_3 = sp.lambdify((z[2], z[5]), abs(e[5]) ** 2, 'numpy')
+
+        self._beta_a = lambda a: (spo.minimize_scalar(
+            lambda x: f_1(np.exp(1j * x), np.exp(1j * a)),
+            bounds=(-1, 1),
+            method='bounded'
+        )).x
+
+        self._beta_Y = lambda a: (spo.minimize_scalar(
+            lambda x: 1000 * f_2(np.exp(1j * x), np.exp(1j * a)),
+            bounds=(-1, 0.5),
+            method='bounded'
+        )).x
+
+        self._beta_D = lambda a: (spo.minimize_scalar(
+            lambda x:  f_3(np.exp(1j * x), np.exp(1j * a)),
+            bounds=(-1, 0.5),
+            method='bounded'
+        )).x
 
     def update_leg_positions(self, motor_top, motor_bottom, motor_body):
 
-        beta_Y = model.beta_y(motor_top)
-        beta_D = model.beta_d(motor_bottom)
-        beta_A = np.pi / 2 - model.beta_a(motor_body)
+        beta_Y = self._beta_Y(motor_top)
+        beta_D = self._beta_D(motor_bottom)
+        beta_A = self._beta_a(motor_body)
 
         anchor = Translate(model.body_width / 2, model.body_width / 2, 0)
 
@@ -158,13 +187,19 @@ class DarkpawModel:
             BackRight: {'motor_top': 0, 'motor_bottom': 0, 'motor_body': 0}
         }
         self.freq = 0.001
-        self.phase = 0
+        self.t = 0
+        self.walk_model = model.Walk(2, 0, 0)
 
     def update(self, dt):
-        self.phase = np.mod(self.phase + self.freq * dt, 1)
+        self.t += dt
 
-        for leg, motor in self.motor_values.items():
-            motor['motor_body'] += 0.2 * (1 - 2 * self.phase)
+        for i, (leg, motor) in enumerate(self.motor_values.items()):
+            p, u = self.walk_model.position(self.t + (i / 4) * self.walk_model.t_cycle)
+            if u is not None:
+                motor['motor_body'] = u[0]
+                motor['motor_bottom'] = u[1]
+                motor['motor_top'] = u[2]
+
         self.update_positions()
 
     def update_positions(self):
